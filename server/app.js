@@ -77,7 +77,7 @@ Socketio.on("connection", socket => {
         break;
       case "civilian":
         console.log("civilian round start");
-        Socketio.emit("prompt", "Civilians choose who to exile.");
+        Socketio.emit("prompt", "Civilians vote who to exile.");
         Socketio.emit("action", "civAction");
         Socketio.emit("update-users", users);
         break;
@@ -92,6 +92,31 @@ Socketio.on("connection", socket => {
     console.log("victim:", victim);
   });
 
+  //CIVILIAN VOTE EVENT
+  socket.on("vote", name => {
+    var votes = {};
+    users.forEach(function (user) {
+      votes[user.name] = 0;
+    });
+    votes[name] += 1;
+    console.log(votes);
+    socket.on("vote-complete", () => {
+      var exiled = Object.keys(votes).reduce((a, b) => votes[a] > votes[b] ? a : b);
+      console.log(exiled);
+      Socketio.emit("vote-results", votes);
+      Socketio.emit("exiled", exiled);
+      users.find(x => x.name === exiled).life = false;
+      Socketio.emit("update-users", users);
+    });
+  });
+
+  //VICTORY CONDITIONS 
+  //Civilian
+  var mafia = users.find(x => x.role === 'MAFIA');
+  var citypeople = users.find(x => x.role !== 'MAFIA');
+  if ((mafia.find(m => m.life === true)) < 1) {
+    Socketio.emit("endgame", "MAFIA WINS");
+  } else if (())
 
 
 });
