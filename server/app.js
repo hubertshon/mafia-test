@@ -7,17 +7,18 @@ const Socketio = require("socket.io")(Http);
 
 
 var sockets = [];
-// var players = {};
 
-
-var message = "";
+var time = "";
 
 var users = [];
 let user = {};
-var mafia = {};
+// var mafia = {};
 
 
 
+const sleep = (milliseconds) => {
+  return new Promise(resolve => setTimeout(resolve, milliseconds));
+};
 
 Socketio.on("connection", socket => {
   sockets.push(socket);
@@ -36,27 +37,31 @@ Socketio.on("connection", socket => {
   socket.on("startgame", () => {
     console.log('startedgame', socket.id);
     Socketio.emit('pregame');
-    users[Math.floor(Math.random() * users.length)]["role"] = "MAFIA";
+    shuffleArray(users);
+    users[0]["role"] = "MAFIA";
+    // users[Math.floor(Math.random() * users.length)]["role"] = "MAFIA";
+    console.log("mafia chosen:", users);
   });
 
   socket.on("pregame-loaded", () => {
     console.log("this person loaded:", socket.id);
   });
   socket.on("get-card", (userName) => {
-    var userRole = users.find(x => x.name === userName);
-    console.log(userRole);
-    socket.emit("user-role", userRole);
+    var userCard = users.find(x => x.name === userName);
+    console.log(userCard);
+    socket.emit("user-card", userCard);
   });
 
   //DAY/NIGHT CYCLE
-  socket.on("message", data => {
-    switch (data) {
-      case "night":
-        message = "Go to sleep";
+  socket.on("time", message => {
+    Socketio.emit("update-users", users);
+    switch (message) {
+      case 'night':
+        message = "Night Time";
         Socketio.emit("night-time", message);
         break;
-      case "day":
-        message = "Wake Up";
+      case 'day':
+        message = "Day Time";
         Socketio.emit("day-time", message);
         break;
     }
@@ -66,10 +71,15 @@ Socketio.on("connection", socket => {
   socket.on("round", data => {
     switch (data) {
       case "mafia":
-        console.log("got mafia");
-        socket.emit("prompt", "The Mafia choose your target");
-        socket.emit("action", "mafiaAction");
-        socket.emit("users", users);
+        socket.emit("prompt", "Mafia, choose your target");
+        socket.emit("action", "actionMafia");
+        socket.emit("update-users", users);
+        break;
+      case "civilian":
+        console.log("civilian round start");
+        Socketio.emit("prompt", "Civilians choose who to exile.");
+        Socketio.emit("action", "civAction");
+        Socketio.emit("update-users", users);
         break;
     }
   });
@@ -78,15 +88,13 @@ Socketio.on("connection", socket => {
   socket.on("kill", name => {
     users.find(x => x.name === name).life = false;
     var victim = users.find(x => x.name === name);
-    message = "Wake Up";
-    Socketio.emit("day-time", message);
     Socketio.emit("death-announce", victim);
-    console.log(victim);
-    Socketio.emit("update-users", users);
+    console.log("victim:", victim);
   });
+
+
+
 });
-
-
 
 
 
@@ -101,4 +109,14 @@ function addUser(name, socket) {
   user["life"] = true;
   users.push(JSON.parse(JSON.stringify(user)));
   console.log("NEW USER:", users);
+}
+
+/* Randomize array in-place using Durstenfeld shuffle algorithm */
+function shuffleArray(array) {
+  for (var i = array.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var temp = array[i];
+    array[i] = array[j];
+    array[j] = temp;
+  }
 }
