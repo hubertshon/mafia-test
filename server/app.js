@@ -22,51 +22,71 @@ var mafia = {};
 Socketio.on("connection", socket => {
   sockets.push(socket);
 
-  //User
+  //USER ADD
   socket.on("add-user", name => {
     addUser(name, socket);
     Socketio.emit('user-connected', name);
     //will this give players wrong cards if they sign in simultaenously?
     Socketio.to(socket.id).emit('user-info', users[users.length - 1]);
     Socketio.emit('users', users);
-    socket.emit('message', "hello");
+    socket.emit('message', `Welcome ${name}!`);
   });
 
-  //Pregame
+  //PREGAME
   socket.on("startgame", () => {
     console.log('startedgame', socket.id);
     Socketio.emit('pregame');
-    mafia = users[Math.floor(Math.random() * users.length)];
+    users[Math.floor(Math.random() * users.length)]["role"] = "MAFIA";
   });
 
-  socket.on("pregame-loaded", (userName) => {
+  socket.on("pregame-loaded", () => {
     console.log("this person loaded:", socket.id);
-    console.log("mafia:", mafia);
   });
-  // Socketio.emit("user-role", users);
   socket.on("get-card", (userName) => {
-    socket.emit("get-card", "CARD HERE");
     var userRole = users.find(x => x.name === userName);
     console.log(userRole);
     socket.emit("user-role", userRole);
-    console.log(socket.id);
+  });
+
+  //DAY/NIGHT CYCLE
+  socket.on("message", data => {
+    switch (data) {
+      case "night":
+        message = "Go to sleep";
+        Socketio.emit("night-time", message);
+        break;
+      case "day":
+        message = "Wake Up";
+        Socketio.emit("day-time", message);
+        break;
+    }
+  });
+
+  //ROUND 
+  socket.on("round", data => {
+    switch (data) {
+      case "mafia":
+        console.log("got mafia");
+        socket.emit("prompt", "The Mafia choose your target");
+        socket.emit("action", "mafiaAction");
+        socket.emit("users", users);
+        break;
+    }
+  });
+
+  //MAFIA KILL EVENT
+  socket.on("kill", name => {
+    users.find(x => x.name === name).life = false;
+    var victim = users.find(x => x.name === name);
+    message = "Wake Up";
+    Socketio.emit("day-time", message);
+    Socketio.emit("death-announce", victim);
+    console.log(victim);
+    Socketio.emit("update-users", users);
   });
 });
 
 
-
-// socket.on("message", data => {
-//   switch (data) {
-//     case "night":
-//       message = "Go to sleep";
-//       Socketio.emit("message", message);
-//       break;
-//     case "day":
-//       message = "Wake Up";
-//       Socketio.emit("message", message);
-//       break;
-//   }
-// });
 
 
 
@@ -77,7 +97,7 @@ Http.listen(3000, () => {
 function addUser(name, socket) {
   user["id"] = socket.id;
   user["name"] = name;
-  user["role"] = "";
+  user["role"] = "Civilian";
   user["life"] = true;
   users.push(JSON.parse(JSON.stringify(user)));
   console.log("NEW USER:", users);
