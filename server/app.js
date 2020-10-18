@@ -38,13 +38,11 @@ Socketio.on("connection", socket => {
     shuffleArray(users);
     users[0]["role"] = "MAFIA";
     users[1]["role"] = "POLICE";
+    users[2]["role"] = "DOCTOR";
     // users[Math.floor(Math.random() * users.length)]["role"] = "MAFIA";
     console.log("mafia chosen:", users);
 
-    users.forEach(function (user) {
-      votes[user.name] = 0;
-      votes["skip"] = 0;
-    });
+    voteSetup();
   });
 
   socket.on("pregame-loaded", () => {
@@ -83,6 +81,10 @@ Socketio.on("connection", socket => {
         socket.emit("prompt", "Police, investigate a suspect");
         socket.emit("action", "actionPolice");
         break;
+      case "doctor":
+        socket.emit("prompt", "Doctor, choose ONE person to save");
+        socket.emit("action", "actionDoctor");
+        break;
       case "citizen":
         console.log("citizen round start");
         Socketio.emit("prompt", "Civilians vote who to exile.");
@@ -98,17 +100,27 @@ Socketio.on("connection", socket => {
     var victim = users.find(x => x.name === name);
     Socketio.emit("death-announce", victim);
     console.log("victim:", victim);
+
   });
 
 
   //POLICE CHECK EVENT 
-  socket.on("check", name => {
+  socket.on("search", name => {
     var suspect = users.find(x => x.name === name);
     if (suspect.role === "MAFIA") {
-      socket.emit("prompt", "Mafia spotted!");
+      Socketio.emit("prompt-search", `${name} is guilty!`);
     } else {
-      socket.emit("prompt", "Innocent.");
+      Socketio.emit("prompt-search", `${name} is innocent!`);
     }
+  });
+
+  //DOCTOR SAVE EVENT
+  socket.on("save", data => {
+    users.find(x => x.name === data.name).life = true;
+    console.log(data.victim);
+    socket.emit("prompt", `You chose to save ${data.name}`);
+    Socketio.emit("prompt-save", data.name);
+    checkWinner();
   });
 
 
@@ -133,12 +145,12 @@ Socketio.on("connection", socket => {
     var exiled = Object.keys(votes).reduce((a, b) => votes[a] > votes[b] ? a : b);
     console.log(votes);
     console.log(exiled);
-    Socketio.emit("vote-results", votes);
+    // Socketio.emit("vote-results", votes);
     Socketio.emit("exiled", exiled);
     users.find(x => x.name === exiled).life = false;
     Socketio.emit("update-users", users);
     checkWinner();
-    votes = {};
+    voteSetup();
   });
 
 
@@ -150,7 +162,7 @@ Socketio.on("connection", socket => {
     var citizens = users.filter(x => x.role !== 'MAFIA' && x.life === true);
     if (mafia.length === 0) {
       Socketio.emit("endgame", "citizens");
-    } else if (mafia.length > citizens.length) {
+    } else if (mafia.length === citizens.length) {
       Socketio.emit("endgame", "mafia");
     }
     console.log("check");
@@ -181,4 +193,11 @@ function shuffleArray(array) {
     array[i] = array[j];
     array[j] = temp;
   }
+}
+
+function voteSetup() {
+  users.forEach(function (user) {
+    votes[user.name] = 0;
+    votes["skip"] = 0;
+  });
 }
