@@ -13,6 +13,7 @@ let user = {};
 // var mafia = {};
 
 
+const gameRooms = ["NYC", "LA", "VEGAS"];
 
 const sleep = (milliseconds) => {
   return new Promise(resolve => setTimeout(resolve, milliseconds));
@@ -21,20 +22,32 @@ const sleep = (milliseconds) => {
 Socketio.on("connection", socket => {
   sockets.push(socket);
 
+  socket.on("join-room", room => {
+    if (gameRooms.includes(room)) {
+      socket.join(room);
+      return socket.emit("success", `You have successfully joined ${room}!`);
+    } else {
+      return socket.emit("err", "No Room with the name" + room);
+    }
+  });
+
   //USER ADD
   socket.on("add-user", name => {
+    console.log(socket.rooms);
     addUser(name, socket);
-    Socketio.emit('user-connected', name);
+    var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
+    Socketio.to(lastRoom).emit('user-connected', name);
     //will this give players wrong cards if they sign in simultaenously?
-    Socketio.to(socket.id).emit('user-info', users[users.length - 1]);
-    Socketio.emit('users', users);
+    Socketio.to(lastRoom).emit('user-info', users[users.length - 1]);
+    Socketio.to(lastRoom).emit('users', users);
     socket.emit('message', `Welcome ${name}!`);
   });
 
   //PREGAME
   socket.on("startgame", () => {
     console.log('startedgame', socket.id);
-    Socketio.emit('pregame');
+    var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
+    Socketio.to(lastRoom).emit('pregame');
     shuffleArray(users);
     users[0]["role"] = "MAFIA";
     users[1]["role"] = "POLICE";
@@ -48,6 +61,7 @@ Socketio.on("connection", socket => {
   socket.on("pregame-loaded", () => {
     console.log("this person loaded:", socket.id);
   });
+
   socket.on("get-card", (userName) => {
     var userCard = users.find(x => x.name === userName);
     console.log(userCard);
@@ -56,21 +70,24 @@ Socketio.on("connection", socket => {
 
   //DAY/NIGHT CYCLE
   socket.on("time", message => {
-    Socketio.emit("update-users", users);
+    var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
+    console.log("NIGHT TIME:", socket.rooms);
+    Socketio.to(lastRoom).emit("update-users", users);
     switch (message) {
       case 'night':
         message = "Night Time";
-        Socketio.emit("night-time", message);
+        Socketio.to(lastRoom).emit("night-time", message);
         break;
       case 'day':
         message = "Day Time";
-        Socketio.emit("day-time", message);
+        Socketio.to(lastRoom).emit("day-time", message);
         break;
     }
   });
 
   //ROUND 
   socket.on("round", data => {
+    var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
     switch (data) {
       case "mafia":
         socket.emit("prompt", "Mafia, choose your target");
@@ -87,18 +104,19 @@ Socketio.on("connection", socket => {
         break;
       case "citizen":
         console.log("citizen round start");
-        Socketio.emit("prompt", "Civilians vote who to exile.");
-        Socketio.emit("action", "civAction");
-        Socketio.emit("update-users", users);
+        Socketio.to(lastRoom).emit("prompt", "Civilians vote who to exile.");
+        Socketio.to(lastRoom).emit("action", "civAction");
+        Socketio.to(lastRoom).emit("update-users", users);
         break;
     }
   });
 
   //MAFIA KILL EVENT
   socket.on("kill", name => {
+    var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
     users.find(x => x.name === name).life = false;
     var victim = users.find(x => x.name === name);
-    Socketio.emit("death-announce", victim);
+    Socketio.to(lastRoom).emit("death-announce", victim);
     console.log("victim:", victim);
 
   });
@@ -106,21 +124,23 @@ Socketio.on("connection", socket => {
 
   //POLICE CHECK EVENT 
   socket.on("search", name => {
+    var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
     var suspect = users.find(x => x.name === name);
     if (suspect.role === "MAFIA") {
-      Socketio.emit("prompt-search", `${name} is guilty!`);
+      Socketio.to(lastRoom).emit("prompt-search", `${name} is guilty!`);
     } else {
-      Socketio.emit("prompt-search", `${name} is innocent!`);
+      Socketio.to(lastRoom).emit("prompt-search", `${name} is innocent!`);
     }
   });
 
   //DOCTOR SAVE EVENT
   socket.on("save", data => {
+    var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
     users.find(x => x.name === data.name).life = true;
     console.log(data.victim);
     socket.emit("prompt", `You chose to save ${data.name}`);
-    Socketio.emit("prompt-save", data.name);
-    checkWinner();
+    Socketio.to(lastRoom).emit("prompt-save", data.name);
+    checkWinner(socket);
   });
 
 
@@ -143,27 +163,28 @@ Socketio.on("connection", socket => {
 
   socket.on("vote-complete", () => {
     var exiled = Object.keys(votes).reduce((a, b) => votes[a] > votes[b] ? a : b);
+    var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
     console.log(votes);
     console.log(exiled);
     // Socketio.emit("vote-results", votes);
-    Socketio.emit("exiled", exiled);
+    Socketio.to(lastRoom).emit("exiled", exiled);
     users.find(x => x.name === exiled).life = false;
-    Socketio.emit("update-users", users);
-    checkWinner();
+    Socketio.to(lastRoom).emit("update-users", users);
+    checkWinner(socket);
     voteSetup();
   });
 
 
   //VICTORY CONDITIONS 
 
-  function checkWinner() {
-
+  function checkWinner(socket) {
+    var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
     var mafia = users.filter(x => x.role === 'MAFIA' && x.life === true);
     var citizens = users.filter(x => x.role !== 'MAFIA' && x.life === true);
     if (mafia.length === 0) {
-      Socketio.emit("endgame", "citizens");
+      Socketio.to(lastRoom).emit("endgame", "citizens");
     } else if (mafia.length === citizens.length) {
-      Socketio.emit("endgame", "mafia");
+      Socketio.to(lastRoom).emit("endgame", "mafia");
     }
     console.log("check");
   }
