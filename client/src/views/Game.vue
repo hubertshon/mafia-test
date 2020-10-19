@@ -1,0 +1,270 @@
+<template>
+  <div class="game">
+    <div v-show="deathmessage === 'YOU DIED'">
+      <h1> {{ deathmessage }} </h1>
+    </div>
+    <div v-show="deathmessage === ''">
+    <h2> {{ userName }}, you are about to recieve a card. Do not show anyone!</h2>
+    <button v-on:click="getCard()">Get Card</button>
+    <div>
+      <p>You are {{ userInfo.role }}</p>
+      <p>userlist:{{ userList }} </p>
+    </div>
+    
+    <h1>{{ message }}</h1>
+    <p> {{ userInfo }} </p>
+  
+
+  <!-- Event Screen -->
+    <div>
+      <button v-if="message==='Day Time' || message === 'Welcome to Mafia'" v-on:click="change('night')">Night Time</button>
+      <button v-show="message === 'Night Time'" v-on:click="change('day')">Day Time</button>
+    </div>
+      <!-- <h2 v-if="message === 'Day Time'">{{ promptMessage }}</h2> -->
+      <h2>{{ promptMessage }}</h2>
+
+      
+      <h4>{{ helpMessage }}</h4>
+      <!-- MAFIA NIGHT VOTE -->
+      <div v-if="actionPrompt==='actionMafia'">
+        <div class="mafia-vote" v-for="user in userList" :key="user.id">
+          <p> {{ user.name }} </p>
+          <button v-on:click="killPlayer(user.name)">Kill</button>
+        </div>
+      </div>
+
+      <div v-if="actionPrompt==='actionPolice'">
+        <div class="police-vote" v-for="user in userList" :key="user.id">
+          <p> {{ user.name }} </p>
+          <button v-on:click="checkPlayer(user.name)">Investigate</button>
+        </div>
+      </div>
+
+      <div v-if="actionPrompt === 'actionDoctor'">
+        <div class="doctor-vote" v-for="user in userList" :key="user.id">
+          <p> {{ user.name }} </p>
+          <button v-on:click="savePlayer(user.name)">Save</button>
+        </div>
+      </div>
+
+      <!-- CIVILIAN DAY VOTE -->
+      <button v-show="this.message === 'Day Time'" v-on:click="civRound()">Begin Vote</button>
+      <div v-if="actionPrompt==='civAction'">
+        <div class="citizen-vote" v-for="user in userList" :key="user.id">
+          <p> {{ user.name }} </p>
+          <button v-on:click="votePlayer(user.name)">Vote</button>
+          
+        </div>
+        <button v-on:click="voteSkip()">Skip</button>
+      </div>
+      <button v-on:click="voteDone()">Done Voting</button>
+      
+    
+  </div>
+  </div>
+
+</template>
+
+<script>
+// import io from "socket.io-client";
+export default {
+  name: "Game",
+  props: {
+    socket: {
+      type: Object,
+      required: true,
+    },
+    userName: String,
+  },
+
+  data() {
+    return {
+      // socket: {},
+      context: {},
+      // time: "day",
+      message: "Welcome to Mafia",
+      deathmessage: "",
+      promptMessage: "Instructions Here",
+      actionPrompt: "",
+      victimMessage: "",
+      userList: [],
+      userInfo: {
+        role: "...",
+      },
+      victim: "",
+    };
+  },
+  created() {
+    // this.socket = io("http://localhost:3000");
+    this.socket.emit("pregame-loaded");
+  },
+  mounted() {
+    this.socket.on("user-card", (card) => {
+      console.log("got the card", card);
+      this.userInfo = card;
+      console.log(this.userInfo);
+    });
+    this.socket.on("night-time", (time) => {
+      this.message = time;
+      setTimeout(this.mafiaRound, 3000);
+      console.log("night!");
+    });
+    this.socket.on("day-time", (time) => {
+      this.message = time;
+      this.promptMessage = this.victimMessage;
+      this.actionPrompt = "";
+    });
+    this.socket.on("prompt", (prompt) => {
+      this.promptMessage = prompt;
+    });
+    this.socket.on("prompt-search", (prompt) => {
+      if (this.userInfo.role === "POLICE") {
+        this.promptMessage = prompt;
+        setTimeout(this.clearPrompt, 3000);
+      } else {
+        setTimeout(this.doctorRound, 3000);
+      }
+    });
+    this.socket.on("prompt-save", (data) => {
+      if (this.victim === data) {
+        this.victimMessage = `${data} almost died, but was miraculously saved!`;
+      } else {
+        this.victimMessage = `${this.victim} was found dead.`;
+      }
+    });
+    this.socket.on("action", (action) => {
+      this.actionPrompt = action;
+    });
+    this.socket.on("users", (users) => {
+      this.userList = users;
+    });
+    this.socket.on("death-announce", (victim) => {
+      console.log("victim found", victim);
+      this.victim = victim.name;
+      this.victimMessage = `${this.victim} was found dead.`;
+      this.promptMessage = "Instructions Here";
+      setTimeout(this.policeRound, 3000);
+    });
+    this.socket.on("update-users", (users) => {
+      console.log("update-users");
+      this.userList = users;
+      this.checkHealth();
+      this.clearHelp();
+    });
+    this.socket.on("exiled", (exiled) => {
+      this.promptMessage = `${exiled} was exiled!`;
+      setTimeout(this.clearPrompt, 3000);
+      this.checkHealth();
+    });
+    this.socket.on("endgame", (winner) => {
+      if (winner === "citizens") {
+        this.message = "CITIZENS WIN!";
+      } else if (winner === "mafia") {
+        this.message = "MAFIA WINS";
+      }
+    });
+  },
+  methods: {
+    getCard() {
+      this.socket.emit("get-card", this.userName);
+      console.log(this.userName);
+    },
+    change(message) {
+      this.socket.emit("time", message);
+      // if (this.message === "day") {
+      //   this.time = "night";
+      // } else {
+      //   this.time = "day";
+      // }
+    },
+    mafiaRound() {
+      if (this.userInfo.role === "MAFIA") {
+        this.socket.emit("round", "mafia");
+        console.log("mafia sent!");
+      }
+    },
+    killPlayer(name) {
+      this.socket.emit("kill", name);
+      this.actionPrompt = "";
+    },
+    //POLICE ROUND
+    policeRound() {
+      if (this.userInfo.role === "POLICE" && this.deathmessage === "") {
+        this.socket.emit("round", "police");
+        console.log("police sent!");
+      } else if (
+        this.userInfo.role === "DOCTOR" &&
+        this.deathmessage === "YOU DIED"
+      ) {
+        this.doctorRound();
+      }
+    },
+    checkPlayer(name) {
+      this.socket.emit("search", name);
+      this.actionPrompt = "";
+    },
+    //DOCTOR ROUND
+    doctorRound() {
+      if (this.userInfo.role === "DOCTOR" && this.deathmessage === "") {
+        this.socket.emit("round", "doctor");
+        console.log("doctor sent!");
+      } else if (
+        this.userInfo.role === "DOCTOR" &&
+        this.deathmessage === "YOU DIED"
+      ) {
+        this.socket.emit("time", "day");
+      }
+    },
+    savePlayer(name) {
+      this.socket.emit("save", { name: name, victim: this.victim });
+      this.socket.emit();
+      this.actionPrompt = "";
+    },
+    //VOTING
+    voteBegin() {
+      this.socket.emit("vote-begin");
+    },
+    votePlayer(name) {
+      this.socket.emit("vote", name);
+      this.actionPrompt = "";
+      this.helpMessage = `You voted for ${name}`;
+      console.log("vote cast");
+    },
+    voteSkip() {
+      this.socket.emit("vote-skip");
+      this.helpMessage = "";
+      this.actionPrompt = "You skipped vote";
+    },
+    voteDone() {
+      this.socket.emit("vote-complete");
+    },
+    civRound() {
+      this.socket.emit("round", "citizen");
+      this.voteBegin();
+    },
+    checkHealth() {
+      var health = this.userList.find((x) => x.name === this.userName);
+      if (health.life !== true) {
+        this.deathmessage = "YOU DIED";
+      }
+    },
+    clearPrompt() {
+      this.promptMessage = "Instructions Here";
+    },
+    clearHelp() {
+      this.helpMessage = "";
+    },
+  },
+};
+</script>
+
+<!-- Add "scoped" attribute to limit CSS to this component only -->
+<style scoped>
+h1 {
+  text-align: center;
+}
+
+.blockgame {
+  background-color: rgb(119, 181, 181);
+}
+</style>
