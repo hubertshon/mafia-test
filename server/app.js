@@ -23,7 +23,7 @@ Socketio.on("connection", socket => {
   sockets.push(socket);
 
   socket.on("join-room", room => {
-    if (gameRooms.includes(room)) {
+    if (gameRooms.includes(room)) { //take this out, have a string generated client side
       socket.join(room);
       return socket.emit("success", `You have successfully joined ${room}!`);
     } else {
@@ -58,6 +58,7 @@ Socketio.on("connection", socket => {
     voteSetup();
   });
 
+  //Documenting Player status
   socket.on("pregame-loaded", () => {
     console.log("this person loaded:", socket.id);
   });
@@ -222,3 +223,20 @@ function voteSetup() {
     votes["skip"] = 0;
   });
 }
+
+//USER ROLE DEALING WITH SETTING PARAMETERS
+// var mafiaNumber = 1;
+// var policeNumber = 1;
+// var doctorNumber = 1;
+
+
+// var roleNumber = mafiaNumber + policeNumber + doctorNumber;
+// for (var i = 0; i < roleNumber; i++) {
+//   if (i < mafiaNumber) {
+//     users[i]["role"] = "MAFIA";
+//   } else if (i < (mafiaNumber + policeNumber) && (i >= mafiaNumber)) {
+//     users[i]["role"] = "POLICE";
+//   } else if (i < (mafiaNumber + policeNumber + doctorNumber) && (i >= (mafiaNumber + policeNumber))) {
+//     users[i]["role"] = "DOCTOR";
+//   }
+// }

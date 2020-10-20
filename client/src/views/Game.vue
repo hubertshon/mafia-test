@@ -80,7 +80,6 @@ export default {
   data() {
     return {
       // socket: {},
-      context: {},
       // time: "day",
       message: "Welcome to Mafia",
       deathmessage: "",
