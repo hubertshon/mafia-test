@@ -25,6 +25,7 @@
 
       
       <h4>{{ helpMessage }}</h4>
+      <p v-if="showVoteResults === true">{{ voteResults }} </p>
       <!-- MAFIA NIGHT VOTE -->
       <div v-if="actionPrompt==='actionMafia'">
         <div class="mafia-vote" v-for="user in userList" :key="user.id">
@@ -91,6 +92,8 @@ export default {
         role: "...",
       },
       victim: "",
+      voteResults: {},
+      showVoteResults: false,
     };
   },
   created() {
@@ -105,6 +108,8 @@ export default {
     });
     this.socket.on("night-time", (time) => {
       this.message = time;
+      this.voteResults = {};
+      this.showVoteResults = false;
       setTimeout(this.mafiaRound, 3000);
       console.log("night!");
     });
@@ -155,6 +160,11 @@ export default {
       setTimeout(this.clearPrompt, 3000);
       this.checkHealth();
     });
+    this.socket.on("vote-none", (votes) => {
+      this.promptMessage = "No one was voted off";
+      this.voteResults = votes;
+      this.showVoteResults = true;
+    });
     this.socket.on("endgame", (winner) => {
       if (winner === "citizens") {
         this.message = "CITIZENS WIN!";
@@ -192,10 +202,10 @@ export default {
         this.socket.emit("round", "police");
         console.log("police sent!");
       } else if (
-        this.userInfo.role === "DOCTOR" &&
+        this.userInfo.role === "POLICE" &&
         this.deathmessage === "YOU DIED"
       ) {
-        this.doctorRound();
+        setTimeout(this.skipPoliceSearch, 1500);
       }
     },
     checkPlayer(name) {
@@ -211,12 +221,11 @@ export default {
         this.userInfo.role === "DOCTOR" &&
         this.deathmessage === "YOU DIED"
       ) {
-        this.socket.emit("time", "day");
+        setTimeout(this.savePlayer("SkipVote"), 1500);
       }
     },
     savePlayer(name) {
       this.socket.emit("save", { name: name, victim: this.victim });
-      this.socket.emit();
       this.actionPrompt = "";
     },
     //VOTING
@@ -240,6 +249,9 @@ export default {
     civRound() {
       this.socket.emit("round", "citizen");
       this.voteBegin();
+    },
+    skipPoliceSearch() {
+      this.socket.emit("search", "SkipVote");
     },
     checkHealth() {
       var health = this.userList.find((x) => x.name === this.userName);

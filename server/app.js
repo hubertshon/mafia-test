@@ -14,6 +14,7 @@ let user = {};
 
 
 const gameRooms = ["NYC", "LA", "VEGAS"];
+const policeNumber = 1;
 
 const sleep = (milliseconds) => {
   return new Promise(resolve => setTimeout(resolve, milliseconds));
@@ -82,6 +83,7 @@ Socketio.on("connection", socket => {
       case 'day':
         message = "Day Time";
         Socketio.to(lastRoom).emit("day-time", message);
+        checkWinner(socket);
         break;
     }
   });
@@ -125,9 +127,15 @@ Socketio.on("connection", socket => {
 
   //POLICE CHECK EVENT 
   socket.on("search", name => {
+    var deadpolice = 0;
     var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
     var suspect = users.find(x => x.name === name);
-    if (suspect.role === "MAFIA") {
+    if (name === "SkipVote") {
+      deadpolice += 1;
+      if (deadpolice === policeNumber) {
+        Socketio.to(lastRoom).emit("prompt-search", `You're a ghost!`);
+      }
+    } else if (suspect.role === "MAFIA") {
       Socketio.to(lastRoom).emit("prompt-search", `${name} is guilty!`);
     } else {
       Socketio.to(lastRoom).emit("prompt-search", `${name} is innocent!`);
@@ -137,11 +145,15 @@ Socketio.on("connection", socket => {
   //DOCTOR SAVE EVENT
   socket.on("save", data => {
     var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
-    users.find(x => x.name === data.name).life = true;
-    console.log(data.victim);
-    socket.emit("prompt", `You chose to save ${data.name}`);
-    Socketio.to(lastRoom).emit("prompt-save", data.name);
-    checkWinner(socket);
+    if (data.name === "SkipVote") {
+      console.log("skipvote");
+      Socketio.to(lastRoom).emit("prompt-save", data.name);
+    } else {
+      users.find(x => x.name === data.name).life = true;
+      console.log(data.victim);
+      socket.emit("prompt", `You chose to save ${data.name}`);
+      Socketio.to(lastRoom).emit("prompt-save", data.name);
+    }
   });
 
 
@@ -159,7 +171,7 @@ Socketio.on("connection", socket => {
 
   socket.on("vote-skip", () => {
     console.log('vote received');
-    votes["skip"]++;
+    votes["SkipVote"]++;
   });
 
   socket.on("vote-complete", () => {
@@ -167,9 +179,15 @@ Socketio.on("connection", socket => {
     var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
     console.log(votes);
     console.log(exiled);
-    // Socketio.emit("vote-results", votes);
-    Socketio.to(lastRoom).emit("exiled", exiled);
-    users.find(x => x.name === exiled).life = false;
+    if (exiled === "SkipVote") {
+      Socketio.to(lastRoom).emit("vote-none", votes);
+    } else if ((votes[exiled] / users.length) > 0.5) {
+      Socketio.to(lastRoom).emit("exiled", exiled);
+      users.find(x => x.name === exiled).life = false;
+    } else {
+      Socketio.to(lastRoom).emit("vote-none", votes);
+    }
+
     Socketio.to(lastRoom).emit("update-users", users);
     checkWinner(socket);
     voteSetup();
@@ -220,7 +238,7 @@ function shuffleArray(array) {
 function voteSetup() {
   users.forEach(function (user) {
     votes[user.name] = 0;
-    votes["skip"] = 0;
+    votes["SkipVote"] = 0;
   });
 }
 
