@@ -159,7 +159,10 @@ Socketio.on("connection", socket => {
 
 
   //CIVILIAN VOTE EVENT
-  socket.on("vote-begin", () => {
+  socket.on("readyToVote", (data) => {
+    if (data.userLength === data.readyVotes) {
+      Socket.emit
+    }
   });
 
 

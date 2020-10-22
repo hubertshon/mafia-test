@@ -23,7 +23,7 @@
       <!-- <h2 v-if="message === 'Day Time'">{{ promptMessage }}</h2> -->
       <h2>{{ promptMessage }}</h2>
 
-      
+      <h4 v-if="readyVote > 1">Ready to Vote:{{ readyVote }}</h4>
       <h4>{{ helpMessage }}</h4>
       <p v-if="showVoteResults === true">{{ voteResults }} </p>
       <!-- MAFIA NIGHT VOTE -->
@@ -49,7 +49,7 @@
       </div>
 
       <!-- CIVILIAN DAY VOTE -->
-      <button v-show="this.message === 'Day Time'" v-on:click="civRound()">Begin Vote</button>
+      <button v-show="this.message === 'Day Time'" v-on:click="citizenReady()">Begin Vote</button>
       <div v-if="actionPrompt==='civAction'">
         <div class="citizen-vote" v-for="user in userList" :key="user.id">
           <p> {{ user.name }} </p>
@@ -92,6 +92,7 @@ export default {
         role: "...",
       },
       victim: "",
+      readyVote: 0,
       voteResults: {},
       showVoteResults: false,
     };
@@ -154,6 +155,9 @@ export default {
       this.userList = users;
       this.checkHealth();
       this.clearHelp();
+    });
+    this.socket.on("readyToVote", () => {
+      this.readyVote += 1;
     });
     this.socket.on("exiled", (exiled) => {
       this.promptMessage = `${exiled} was exiled!`;
@@ -229,6 +233,12 @@ export default {
       this.actionPrompt = "";
     },
     //VOTING
+    citizenReady() {
+      this.socket.emit("readyToVote", {
+        userLength: this.userList.length,
+        readyVotes: this.readyVote,
+      });
+    },
     voteBegin() {
       this.socket.emit("vote-begin");
     },
