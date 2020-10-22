@@ -160,8 +160,15 @@ Socketio.on("connection", socket => {
 
   //CIVILIAN VOTE EVENT
   socket.on("readyToVote", (data) => {
-    if (data.userLength === data.readyVotes) {
-      Socket.emit
+    var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
+    if ((data.userLength / 2) <= data.readyVotes) {
+      console.log("citizen round start");
+      Socketio.to(lastRoom).emit("prompt", "Civilians vote who to exile.");
+      Socketio.to(lastRoom).emit("action", "civAction");
+      Socketio.to(lastRoom).emit("update-users", users);
+    } else {
+      console.log(data.userLength, data.readyVotes);
+      Socketio.to(lastRoom).emit("addReady");
     }
   });
 

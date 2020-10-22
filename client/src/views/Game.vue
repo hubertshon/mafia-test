@@ -23,7 +23,7 @@
       <!-- <h2 v-if="message === 'Day Time'">{{ promptMessage }}</h2> -->
       <h2>{{ promptMessage }}</h2>
 
-      <h4 v-if="readyVote > 1">Ready to Vote:{{ readyVote }}</h4>
+      <h4 v-if="readyVote > 0">Ready to Vote:{{ readyVote }}</h4>
       <h4>{{ helpMessage }}</h4>
       <p v-if="showVoteResults === true">{{ voteResults }} </p>
       <!-- MAFIA NIGHT VOTE -->
@@ -49,7 +49,7 @@
       </div>
 
       <!-- CIVILIAN DAY VOTE -->
-      <button v-show="this.message === 'Day Time'" v-on:click="citizenReady()">Begin Vote</button>
+      <button v-show="this.message === 'Day Time' && this.showReady === true" v-on:click="sendReady()">Begin Vote</button>
       <div v-if="actionPrompt==='civAction'">
         <div class="citizen-vote" v-for="user in userList" :key="user.id">
           <p> {{ user.name }} </p>
@@ -95,6 +95,7 @@ export default {
       readyVote: 0,
       voteResults: {},
       showVoteResults: false,
+      showReady: true,
     };
   },
   created() {
@@ -139,6 +140,10 @@ export default {
     });
     this.socket.on("action", (action) => {
       this.actionPrompt = action;
+      if (action === "civAction") {
+        this.readyVote = 0;
+        this.showReady = true;
+      }
     });
     this.socket.on("users", (users) => {
       this.userList = users;
@@ -156,8 +161,8 @@ export default {
       this.checkHealth();
       this.clearHelp();
     });
-    this.socket.on("readyToVote", () => {
-      this.readyVote += 1;
+    this.socket.on("addReady", () => {
+      this.readyVote++;
     });
     this.socket.on("exiled", (exiled) => {
       this.promptMessage = `${exiled} was exiled!`;
@@ -233,11 +238,12 @@ export default {
       this.actionPrompt = "";
     },
     //VOTING
-    citizenReady() {
+    sendReady() {
       this.socket.emit("readyToVote", {
         userLength: this.userList.length,
         readyVotes: this.readyVote,
       });
+      this.showReady = false;
     },
     voteBegin() {
       this.socket.emit("vote-begin");
@@ -256,10 +262,9 @@ export default {
     voteDone() {
       this.socket.emit("vote-complete");
     },
-    civRound() {
-      this.socket.emit("round", "citizen");
-      this.voteBegin();
-    },
+    // civRound() {
+    //   this.socket.emit("round", "citizen");
+    // },
     skipPoliceSearch() {
       this.socket.emit("search", "SkipVote");
     },
