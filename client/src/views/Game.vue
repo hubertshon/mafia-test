@@ -17,10 +17,10 @@
 
   <!-- Event Screen -->
     <div>
-      <button v-if="message==='Day Time' || message === 'Welcome to Mafia'" v-on:click="change('night')">Night Time</button>
-      <button v-show="message === 'Night Time'" v-on:click="change('day')">Day Time</button>
+      <button v-if="message==='DAY TIME' || message === 'Welcome to Mafia'" v-on:click="change('night')">NIGHT TIME</button>
+      <button v-show="message === 'NIGHT TIME'" v-on:click="change('day')">DAY TIME</button>
     </div>
-      <!-- <h2 v-if="message === 'Day Time'">{{ promptMessage }}</h2> -->
+      <!-- <h2 v-if="message === 'DAY TIME'">{{ promptMessage }}</h2> -->
       <h2>{{ promptMessage }}</h2>
 
       <h4 v-if="readyVote > 0">Ready to Vote:{{ readyVote }}</h4>
@@ -49,7 +49,7 @@
       </div>
 
       <!-- CIVILIAN DAY VOTE -->
-      <button v-show="this.message === 'Day Time' && this.showReady === true" v-on:click="sendReady()">Begin Vote</button>
+      <button v-show="this.message === 'DAY TIME' && this.showReady === true" v-on:click="sendReady()">Begin Vote</button>
       <div v-if="actionPrompt==='civAction'">
         <div class="citizen-vote" v-for="user in userList" :key="user.id">
           <p> {{ user.name }} </p>
@@ -76,6 +76,7 @@ export default {
       required: true,
     },
     userName: String,
+    userCount: Number,
   },
 
   data() {
@@ -96,6 +97,7 @@ export default {
       voteResults: {},
       showVoteResults: false,
       showReady: true,
+      cardReady: 0,
     };
   },
   created() {
@@ -107,6 +109,14 @@ export default {
       console.log("got the card", card);
       this.userInfo = card;
       console.log(this.userInfo);
+    });
+    this.socket.on("card-dealt", () => {
+      console.log("RDY", this.cardReady);
+      console.log("COUNT", this.userCount);
+      this.cardReady += 1;
+      if (this.cardReady === this.userCount) {
+        this.change("night");
+      }
     });
     this.socket.on("night-time", (time) => {
       this.message = time;
@@ -184,7 +194,10 @@ export default {
   },
   methods: {
     getCard() {
-      this.socket.emit("get-card", this.userName);
+      this.socket.emit("get-card", {
+        name: this.userName,
+        totalPlayers: this.userList.length,
+      });
       console.log(this.userName);
     },
     change(message) {
@@ -239,8 +252,10 @@ export default {
     },
     //VOTING
     sendReady() {
+      var leftAlive = this.userList.filter((obj) => obj.life === true).length;
+      console.log(leftAlive);
       this.socket.emit("readyToVote", {
-        userLength: this.userList.length,
+        living: leftAlive,
         readyVotes: this.readyVote,
       });
       this.showReady = false;
@@ -260,7 +275,8 @@ export default {
       this.actionPrompt = "You skipped vote";
     },
     voteDone() {
-      this.socket.emit("vote-complete");
+      var leftAlive = this.userList.filter((obj) => obj.life === true).length;
+      this.socket.emit("vote-complete", leftAlive);
     },
     // civRound() {
     //   this.socket.emit("round", "citizen");

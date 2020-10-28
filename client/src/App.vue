@@ -1,6 +1,6 @@
 <template>
   <div id="app">
-    <router-view :user-name="userName" :socket="socket" />
+    <router-view :user-name="userName" :socket="socket" :userCount="userCount" />
     <div id="login" v-if="login > 0">
       <h1>Username</h1>
       <h5> {{serverMessage}}</h5>
@@ -33,6 +33,7 @@ export default {
       login: 1,
       roomjoin: "",
       serverMessage: "",
+      userCount: 0,
     };
   },
   created: function () {
@@ -51,8 +52,9 @@ export default {
     this.socket.on("users", (users) => {
       this.userList = users;
     });
-    this.socket.on("pregame", () => {
+    this.socket.on("pregame", (playerCount) => {
       console.log("pregame!");
+      this.userCount = playerCount;
       this.$router.push("/game");
       this.login = 0;
     });

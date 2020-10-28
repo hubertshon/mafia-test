@@ -48,7 +48,7 @@ Socketio.on("connection", socket => {
   socket.on("startgame", () => {
     console.log('startedgame', socket.id);
     var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
-    Socketio.to(lastRoom).emit('pregame');
+    Socketio.to(lastRoom).emit('pregame', users.length);
     shuffleArray(users);
     users[0]["role"] = "MAFIA";
     users[1]["role"] = "POLICE";
@@ -64,9 +64,12 @@ Socketio.on("connection", socket => {
     console.log("this person loaded:", socket.id);
   });
 
-  socket.on("get-card", (userName) => {
-    var userCard = users.find(x => x.name === userName);
+  socket.on("get-card", (data) => {
+    console.log('received name', data.name);
+    var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
+    var userCard = users.find(x => x.name === data.name);
     console.log(userCard);
+    Socketio.to(lastRoom).emit('card-dealt');
     socket.emit("user-card", userCard);
   });
 
@@ -77,11 +80,11 @@ Socketio.on("connection", socket => {
     Socketio.to(lastRoom).emit("update-users", users);
     switch (message) {
       case 'night':
-        message = "Night Time";
+        message = "NIGHT TIME";
         Socketio.to(lastRoom).emit("night-time", message);
         break;
       case 'day':
-        message = "Day Time";
+        message = "DAY TIME";
         Socketio.to(lastRoom).emit("day-time", message);
         checkWinner(socket);
         break;
@@ -94,20 +97,20 @@ Socketio.on("connection", socket => {
     switch (data) {
       case "mafia":
         socket.emit("prompt", "Mafia, choose your target");
-        socket.emit("action", "actionMafia");
+        socket.emit('action', 'actionMafia');
         socket.emit("update-users", users);
         break;
       case "police":
         socket.emit("prompt", "Police, investigate a suspect");
-        socket.emit("action", "actionPolice");
+        socket.emit('action', 'actionPolice');
         break;
       case "doctor":
-        socket.emit("prompt", "Doctor, choose ONE person to save");
+        socket.emit("prompt", "Doctor, save one person");
         socket.emit("action", "actionDoctor");
         break;
       case "citizen":
         console.log("citizen round start");
-        Socketio.to(lastRoom).emit("prompt", "Civilians vote who to exile.");
+        Socketio.to(lastRoom).emit("prompt", "Everyone, vote who to exile");
         Socketio.to(lastRoom).emit("action", "civAction");
         Socketio.to(lastRoom).emit("update-users", users);
         break;
@@ -161,7 +164,7 @@ Socketio.on("connection", socket => {
   //CIVILIAN VOTE EVENT
   socket.on("readyToVote", (data) => {
     var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
-    if ((data.userLength / 2) <= data.readyVotes) {
+    if ((data.living / 2) < (data.readyVotes + 1)) {
       console.log("citizen round start");
       Socketio.to(lastRoom).emit("prompt", "Civilians vote who to exile.");
       Socketio.to(lastRoom).emit("action", "civAction");
@@ -184,14 +187,14 @@ Socketio.on("connection", socket => {
     votes["SkipVote"]++;
   });
 
-  socket.on("vote-complete", () => {
+  socket.on("vote-complete", (living) => {
     var exiled = Object.keys(votes).reduce((a, b) => votes[a] > votes[b] ? a : b);
     var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
     console.log(votes);
     console.log(exiled);
     if (exiled === "SkipVote") {
       Socketio.to(lastRoom).emit("vote-none", votes);
-    } else if ((votes[exiled] / users.length) > 0.5) {
+    } else if ((votes[exiled] / living) > 0.5) {
       Socketio.to(lastRoom).emit("exiled", exiled);
       users.find(x => x.name === exiled).life = false;
     } else {
