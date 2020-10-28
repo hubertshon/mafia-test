@@ -53,7 +53,7 @@ Socketio.on("connection", socket => {
     users[0]["role"] = "MAFIA";
     users[1]["role"] = "POLICE";
     users[2]["role"] = "DOCTOR";
-    // users[Math.floor(Math.random() * users.length)]["role"] = "MAFIA";
+    shuffleArray(users);
     console.log("mafia chosen:", users);
 
     voteSetup();
