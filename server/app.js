@@ -13,7 +13,7 @@ let user = {};
 // var mafia = {};
 
 
-const gameRooms = ["NYC", "LA", "VEGAS"];
+// const gameRooms = ["NYC", "LA", "VEGAS"];
 const policeNumber = 1;
 
 const sleep = (milliseconds) => {
@@ -24,12 +24,8 @@ Socketio.on("connection", socket => {
   sockets.push(socket);
 
   socket.on("join-room", room => {
-    if (gameRooms.includes(room)) { //take this out, have a string generated client side
-      socket.join(room);
-      return socket.emit("success", `You have successfully joined ${room}!`);
-    } else {
-      return socket.emit("err", "No Room with the name" + room);
-    }
+    socket.join(room);
+    socket.emit("success", `Joined #${room}!`);
   });
 
   //USER ADD
