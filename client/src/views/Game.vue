@@ -11,7 +11,8 @@
       <p>userlist:{{ userList }} </p>
     </div>
     
-    <h1>{{ message }}</h1>
+    <h1>{{ winMessage }}</h1>
+    <h3 v-if="winMessage === ''">{{ message }}</h3>
     <p> {{ userInfo }} </p>
   
 
@@ -98,6 +99,7 @@ export default {
       showVoteResults: false,
       showReady: true,
       cardReady: 0,
+      winMessage: "",
     };
   },
   created() {
@@ -115,7 +117,7 @@ export default {
       console.log("COUNT", this.userCount);
       this.cardReady += 1;
       if (this.cardReady === this.userCount) {
-        this.change("night");
+        setTimeout(this.changeToNight, 2000);
       }
     });
     this.socket.on("night-time", (time) => {
@@ -174,21 +176,29 @@ export default {
     this.socket.on("addReady", () => {
       this.readyVote++;
     });
+    this.socketIO.on("voteCount", () => {
+      this.voteCount += 1;
+      if (this.voteCount === this.userList.length) {
+        this.voteDone();
+      }
+    });
     this.socket.on("exiled", (exiled) => {
       this.promptMessage = `${exiled} was exiled!`;
       setTimeout(this.clearPrompt, 3000);
       this.checkHealth();
+      setTimeout(this.changeToNight, 4000);
     });
     this.socket.on("vote-none", (votes) => {
       this.promptMessage = "No one was voted off";
       this.voteResults = votes;
       this.showVoteResults = true;
+      setTimeout(this.changeToNight, 4000);
     });
     this.socket.on("endgame", (winner) => {
       if (winner === "citizens") {
-        this.message = "CITIZENS WIN!";
+        this.winMessage = "CITIZENS WIN!";
       } else if (winner === "mafia") {
-        this.message = "MAFIA WINS";
+        this.winMessage = "MAFIA WINS";
       }
     });
   },
@@ -249,6 +259,7 @@ export default {
     savePlayer(name) {
       this.socket.emit("save", { name: name, victim: this.victim });
       this.actionPrompt = "";
+      setTimeout(this.changeToDay, 2000);
     },
     //VOTING
     sendReady() {
@@ -295,6 +306,12 @@ export default {
     },
     clearHelp() {
       this.helpMessage = "";
+    },
+    changeToNight() {
+      this.change("night");
+    },
+    changeToDay() {
+      this.change("day");
     },
   },
 };

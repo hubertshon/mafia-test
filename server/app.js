@@ -173,9 +173,11 @@ Socketio.on("connection", socket => {
 
 
   socket.on("vote", name => {
+    var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
     console.log('vote received');
     votes[name]++;
     console.log(votes);
+    Socketio.to(lastRoom).emit("voteCount");
   });
 
   socket.on("vote-skip", () => {
@@ -198,7 +200,9 @@ Socketio.on("connection", socket => {
     }
 
     Socketio.to(lastRoom).emit("update-users", users);
-    checkWinner(socket);
+    setTimeout(function () {
+      checkWinner(socket);
+    }, 2000);
     voteSetup();
   });
 
