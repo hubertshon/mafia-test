@@ -218,7 +218,7 @@ Socketio.on("connection", socket => {
     } else if (mafia.length === citizens.length) {
       Socketio.to(lastRoom).emit("endgame", "mafia");
     }
-    console.log("check");
+    console.log("check", lastRoom);
   }
 
 });

@@ -11,8 +11,8 @@
       <p>userlist:{{ userList }} </p>
     </div>
     
-    <h1>{{ winMessage }}</h1>
-    <h3 v-if="winMessage === ''">{{ message }}</h3>
+    <!-- <h1 v-if="winMessage !== ''">{{ winMessage }}</h1> -->
+    <h3>{{ message }}</h3>
     <p> {{ userInfo }} </p>
   
 
@@ -20,6 +20,7 @@
     <div>
       <button v-if="message==='DAY TIME' || message === 'Welcome to Mafia'" v-on:click="change('night')">NIGHT TIME</button>
       <button v-show="message === 'NIGHT TIME'" v-on:click="change('day')">DAY TIME</button>
+      
     </div>
       <!-- <h2 v-if="message === 'DAY TIME'">{{ promptMessage }}</h2> -->
       <h2>{{ promptMessage }}</h2>
@@ -87,6 +88,7 @@ export default {
       message: "Welcome to Mafia",
       deathmessage: "",
       promptMessage: "Instructions Here",
+      helpMessage: "",
       actionPrompt: "",
       victimMessage: "",
       userList: [],
@@ -96,6 +98,7 @@ export default {
       victim: "",
       readyVote: 0,
       voteResults: {},
+      voteCount: 0,
       showVoteResults: false,
       showReady: true,
       cardReady: 0,
@@ -184,9 +187,10 @@ export default {
     });
     this.socket.on("exiled", (exiled) => {
       this.promptMessage = `${exiled} was exiled!`;
-      setTimeout(this.clearPrompt, 3000);
+      // setTimeout(this.clearPrompt, 3000);
+      this.voteCount = 0;
       this.checkHealth();
-      setTimeout(this.changeToNight, 4000);
+      setTimeout(this.changeToNight, 5000);
     });
     this.socket.on("vote-none", (votes) => {
       this.promptMessage = "No one was voted off";
@@ -195,10 +199,12 @@ export default {
       setTimeout(this.changeToNight, 4000);
     });
     this.socket.on("endgame", (winner) => {
+      console.log("win:", winner);
       if (winner === "citizens") {
-        this.winMessage = "CITIZENS WIN!";
+        this.message = "CITIZENS WIN"; //maybe there is competition for this variable?
       } else if (winner === "mafia") {
-        this.winMessage = "MAFIA WINS";
+        //but that would not makese sense, tested this empty.
+        this.message = "MAFIA WINS";
       }
     });
   },
