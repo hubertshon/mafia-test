@@ -6,6 +6,7 @@
     <div v-show="deathmessage === ''">
     <h2> {{ userName }}, you are about to recieve a card. Do not show anyone!</h2>
     <button v-on:click="getCard()">Get Card</button>
+    <button v-on:click="test()">TEST</button>
     <div>
       <p>You are {{ userInfo.role }}</p>
       <p>userlist:{{ userList }} </p>
@@ -179,8 +180,14 @@ export default {
     this.socket.on("addReady", () => {
       this.readyVote++;
     });
-    this.socketIO.on("voteCount", () => {
+    this.socket.on("voteCount", (info) => {
       this.voteCount += 1;
+      if (this.voteResults[info.votee] === undefined) {
+        this.voteResults[info.votee] = [info.voter];
+      } else {
+        this.voteResults[info.votee].push(info.voter);
+      }
+      console.log(this.voteResults);
       if (this.voteCount === this.userList.length) {
         this.voteDone();
       }
@@ -190,25 +197,34 @@ export default {
       // setTimeout(this.clearPrompt, 3000);
       this.voteCount = 0;
       this.checkHealth();
-      setTimeout(this.changeToNight, 5000);
+      // autoChangeNight;
     });
-    this.socket.on("vote-none", (votes) => {
+    this.socket.on("vote-none", () => {
       this.promptMessage = "No one was voted off";
-      this.voteResults = votes;
+      // this.voteResults = votes;
       this.showVoteResults = true;
-      setTimeout(this.changeToNight, 4000);
+      // autoChangeNight;
+    });
+    this.socket.on("test-receiver", () => {
+      console.log("received");
     });
     this.socket.on("endgame", (winner) => {
       console.log("win:", winner);
       if (winner === "citizens") {
+        // clearTimeout(autoChangeNight);
         this.message = "CITIZENS WIN"; //maybe there is competition for this variable?
       } else if (winner === "mafia") {
+        // clearTimeout(autoChangeNight);
         //but that would not makese sense, tested this empty.
         this.message = "MAFIA WINS";
       }
     });
+    // var autoChangeNight = setTimeout(this.changeToNight, 5000);
   },
   methods: {
+    test() {
+      this.socket.emit("test");
+    },
     getCard() {
       this.socket.emit("get-card", {
         name: this.userName,
@@ -281,19 +297,26 @@ export default {
       this.socket.emit("vote-begin");
     },
     votePlayer(name) {
-      this.socket.emit("vote", name);
+      this.socket.emit("vote", { votee: name, voter: this.userInfo.name });
       this.actionPrompt = "";
       this.helpMessage = `You voted for ${name}`;
       console.log("vote cast");
     },
     voteSkip() {
-      this.socket.emit("vote-skip");
+      this.socket.emit("vote-skip", {
+        votee: "SkipVote",
+        voter: this.userInfo.name,
+      });
       this.helpMessage = "";
       this.actionPrompt = "You skipped vote";
     },
     voteDone() {
       var leftAlive = this.userList.filter((obj) => obj.life === true).length;
-      this.socket.emit("vote-complete", leftAlive);
+      console.log(this.voteResults);
+      this.socket.emit("vote-complete", {
+        living: leftAlive,
+        votes: this.voteResults,
+      });
     },
     // civRound() {
     //   this.socket.emit("round", "citizen");

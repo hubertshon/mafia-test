@@ -172,31 +172,33 @@ Socketio.on("connection", socket => {
   });
 
 
-  socket.on("vote", name => {
+  socket.on("vote", info => {
     var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
     console.log('vote received');
-    votes[name]++;
-    console.log(votes);
-    Socketio.to(lastRoom).emit("voteCount");
+    // votes[name]++;
+    // console.log(votes);
+    Socketio.to(lastRoom).emit("voteCount", info);
   });
 
-  socket.on("vote-skip", () => {
-    console.log('vote received');
-    votes["SkipVote"]++;
-  });
-
-  socket.on("vote-complete", (living) => {
-    var exiled = Object.keys(votes).reduce((a, b) => votes[a] > votes[b] ? a : b);
+  socket.on("vote-skip", (info) => {
     var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
-    console.log(votes);
+    console.log('vote received');
+    // votes["SkipVote"]++;
+    Socketio.to(lastRoom).emit("voteCount", info);
+  });
+
+  socket.on("vote-complete", (info) => {
+    var exiled = Object.keys(info.votes).reduce((a, b) => info.votes[a].length > info.votes[b].length ? a : b);
+    var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
+    console.log(info.votes);
     console.log(exiled);
     if (exiled === "SkipVote") {
-      Socketio.to(lastRoom).emit("vote-none", votes);
-    } else if ((votes[exiled] / living) > 0.5) {
+      Socketio.to(lastRoom).emit("vote-none");
+    } else if ((info.votes[exiled].length / info.living) > 0.5) {
       Socketio.to(lastRoom).emit("exiled", exiled);
       users.find(x => x.name === exiled).life = false;
     } else {
-      Socketio.to(lastRoom).emit("vote-none", votes);
+      Socketio.to(lastRoom).emit("vote-none");
     }
 
     Socketio.to(lastRoom).emit("update-users", users);
@@ -206,6 +208,9 @@ Socketio.on("connection", socket => {
     voteSetup();
   });
 
+  socket.on("test", () => {
+    checkWinner(socket);
+  });
 
   //VICTORY CONDITIONS 
 
@@ -215,12 +220,17 @@ Socketio.on("connection", socket => {
     var citizens = users.filter(x => x.role !== 'MAFIA' && x.life === true);
     if (mafia.length === 0) {
       Socketio.to(lastRoom).emit("endgame", "citizens");
+      console.log("Citizens Win!");
     } else if (mafia.length === citizens.length) {
       Socketio.to(lastRoom).emit("endgame", "mafia");
+      console.log("Mafia wins!");
+    } else {
+      Socketio.to(lastRoom).emit("endgame", "NONE");
+      console.log("TESTER");
     }
+
     console.log("check", lastRoom);
   }
-
 });
 
 
@@ -249,10 +259,10 @@ function shuffleArray(array) {
 }
 
 function voteSetup() {
-  users.forEach(function (user) {
-    votes[user.name] = 0;
-    votes["SkipVote"] = 0;
-  });
+  // users.forEach(function (user) {
+  //   votes[user.name] = 0;
+  //   votes["SkipVote"] = 0;
+  // });
 }
 
 //USER ROLE DEALING WITH SETTING PARAMETERS
