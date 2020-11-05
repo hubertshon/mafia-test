@@ -201,6 +201,7 @@ export default {
     });
     this.socket.on("vote-none", () => {
       this.promptMessage = "No one was voted off";
+      // this.voteCount = 0;
       // this.voteResults = votes;
       this.showVoteResults = true;
       // autoChangeNight;
