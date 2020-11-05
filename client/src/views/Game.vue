@@ -198,14 +198,14 @@ export default {
       // setTimeout(this.clearPrompt, 3000);
       this.voteCount = 0;
       this.checkHealth();
-      // autoChangeNight;
+      // setTimeout(this.changeToNight, 4000);
     });
     this.socket.on("vote-none", () => {
       this.promptMessage = "No one was voted off";
       this.voteCount = 0;
       // this.voteResults = votes;
       this.showVoteResults = true;
-      // autoChangeNight;
+      // setTimeout(this.changeToNight, 4000);
     });
     this.socket.on("test-receiver", () => {
       console.log("received");
@@ -213,12 +213,14 @@ export default {
     this.socket.on("endgame", (winner) => {
       console.log("win:", winner);
       if (winner === "citizens") {
-        // clearTimeout(autoChangeNight);
+        // clearTimeout(this.autoChangeNight);
         this.message = "CITIZENS WIN"; //maybe there is competition for this variable?
       } else if (winner === "mafia") {
-        // clearTimeout(autoChangeNight);
+        // clearTimeout(this.autoChangeNight);
         //but that would not makese sense, tested this empty.
         this.message = "MAFIA WINS";
+      } else if (winner === "NONE" && this.showVoteResults === true) {
+        setTimeout(this.changeToNight, 4000);
       }
     });
     // var autoChangeNight = setTimeout(this.changeToNight, 5000);

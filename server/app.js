@@ -52,7 +52,6 @@ Socketio.on("connection", socket => {
     shuffleArray(users);
     console.log("mafia chosen:", users);
 
-    voteSetup();
   });
 
   //Documenting Player status
@@ -204,8 +203,7 @@ Socketio.on("connection", socket => {
     Socketio.to(lastRoom).emit("update-users", users);
     setTimeout(function () {
       checkWinner(socket);
-    }, 2000);
-    voteSetup();
+    }, 4000);
   });
 
   socket.on("test", () => {
@@ -226,9 +224,8 @@ Socketio.on("connection", socket => {
       console.log("Mafia wins!");
     } else {
       Socketio.to(lastRoom).emit("endgame", "NONE");
-      console.log("TESTER");
+      console.log("No Winner Yet");
     }
-
     console.log("check", lastRoom);
   }
 });
