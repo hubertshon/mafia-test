@@ -181,6 +181,7 @@ export default {
       this.readyVote++;
     });
     this.socket.on("voteCount", (info) => {
+      var leftAlive = this.userList.filter((obj) => obj.life === true).length;
       this.voteCount += 1;
       if (this.voteResults[info.votee] === undefined) {
         this.voteResults[info.votee] = [info.voter];
@@ -188,7 +189,7 @@ export default {
         this.voteResults[info.votee].push(info.voter);
       }
       console.log(this.voteResults);
-      if (this.voteCount === this.userList.length) {
+      if (this.voteCount === leftAlive) {
         this.voteDone();
       }
     });
@@ -201,7 +202,7 @@ export default {
     });
     this.socket.on("vote-none", () => {
       this.promptMessage = "No one was voted off";
-      // this.voteCount = 0;
+      this.voteCount = 0;
       // this.voteResults = votes;
       this.showVoteResults = true;
       // autoChangeNight;
