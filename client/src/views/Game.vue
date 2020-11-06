@@ -113,7 +113,7 @@ export default {
   mounted() {
     this.socket.on("user-card", (card) => {
       console.log("got the card", card);
-      this.userInfo = card;
+      this.userInfo = card.find((x) => x.name === this.userName);
       console.log(this.userInfo);
     });
     this.socket.on("card-dealt", () => {

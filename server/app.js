@@ -51,7 +51,7 @@ Socketio.on("connection", socket => {
     users[2]["role"] = "DOCTOR";
     shuffleArray(users);
     console.log("mafia chosen:", users);
-
+    Socketio.emit("user-card", users);
   });
 
   //Documenting Player status
@@ -62,10 +62,9 @@ Socketio.on("connection", socket => {
   socket.on("get-card", (data) => {
     console.log('received name', data.name);
     var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
-    var userCard = users.find(x => x.name === data.name);
-    console.log(userCard);
+    // console.log(userCard);
     Socketio.to(lastRoom).emit('card-dealt');
-    socket.emit("user-card", userCard);
+    // socket.emit("user-card", userCard);
   });
 
   //DAY/NIGHT CYCLE
