@@ -8,13 +8,15 @@
         <button id="Login_Register" v-on:click="addUser(userName)">Login</button>
         <h3>Players</h3>
 
-          <p v-for="user in userList" :key="user.id">
+          <p v-for="user in playerList" :key="user.id">
             {{ user.name }}
           </p>
         <div>
-          <button v-on:click="joinRoom('VEGAS')">Join VEGAS</button>
+          <button v-on:click="cleanUp()">Clean Up</button>
+          <input type="text" v-model="roomInput">
+          <button v-on:click="joinRoom(roomInput)">Join ROOM</button>
           <button v-on:click="joinRoom('NYC')">Join NYC</button>
-          <button v-on:click="startGame()" v-if="userList.length > 1">START GAME</button>
+          <button v-on:click="startGame()" v-if="playerList.length > 1">START GAME</button>
         </div>
     </div>
   </div>
@@ -29,9 +31,12 @@ export default {
     return {
       socket: {},
       userName: "",
-      userList: [],
+      playerInfo: {},
+      playerList: [],
       login: 1,
+      roomInput: "",
       roomjoin: "",
+
       serverMessage: "",
       userCount: 0,
     };
@@ -43,14 +48,20 @@ export default {
     this.socket.on("success", (data) => {
       this.serverMessage = data;
     });
-    this.socket.on("user-connected", (name) => {
-      this.message = `${name} has joined`;
+    this.socket.on("setup-user", (userInfo) => {
+      this.playerInfo = userInfo;
+      console.log("Player", this.playerInfo);
+    });
+    this.socket.on("user-connected", (info) => {
+      this.message = `${info.name} has joined`;
+      this.playerList = info.userList;
+      console.log("LIST:", this.playerList);
     });
     // this.socket.on("message", (message) => {
     //   this.message = message;
     // });
     this.socket.on("users", (users) => {
-      this.userList = users;
+      this.playerList = users;
     });
     this.socket.on("pregame", (playerCount) => {
       console.log("pregame!");

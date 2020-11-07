@@ -223,7 +223,6 @@ export default {
         setTimeout(this.changeToNight, 4000);
       }
     });
-    // var autoChangeNight = setTimeout(this.changeToNight, 5000);
   },
   methods: {
     test() {
@@ -345,6 +344,7 @@ export default {
     },
     changeToDay() {
       this.change("day");
+      console.log("day");
     },
   },
 };

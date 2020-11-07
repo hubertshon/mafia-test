@@ -6,10 +6,9 @@ const Socketio = require("socket.io")(Http);
 
 
 
-var sockets = [];
-var votes = {};
-var users = [];
-let user = {};
+// var sockets = [];
+var users = {};
+var options = {};
 // var mafia = {};
 
 
@@ -21,37 +20,56 @@ const sleep = (milliseconds) => {
 };
 
 Socketio.on("connection", socket => {
-  sockets.push(socket);
+  // sockets.push(socket);
+
+  socket.on("host-game", options => {
+    socket.join(options.room);
+    users[options.room] = [];
+    console.log(users);
+    options[options.room] = [options.options];
+    socket.emit("success", options.room);
+  });
 
   socket.on("join-room", room => {
+    if (users[room] === undefined) {
+      socket.emit("err", `${room} does not exist!`);
+    }
     socket.join(room);
-    socket.emit("success", `Joined #${room}!`);
+    socket.emit("success", room);
+
   });
 
   //USER ADD
+
+  //new adduser
   socket.on("add-user", name => {
     console.log(socket.rooms);
-    addUser(name, socket);
+    var userinfo = addUser(name, socket);
     var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
-    Socketio.to(lastRoom).emit('user-connected', name);
-    //will this give players wrong cards if they sign in simultaenously?
-    Socketio.to(lastRoom).emit('user-info', users[users.length - 1]);
-    Socketio.to(lastRoom).emit('users', users);
+    console.log('added', users);
+    users[lastRoom].push(userinfo);
+    socket.emit('setup-user', userinfo);
+    Socketio.to(lastRoom).emit('user-connected', { name: name, userList: users[lastRoom] });
     socket.emit('message', `Welcome ${name}!`);
   });
 
+  socket.on("update-all", (playerInfo) => {
+    var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
+    Socketio.to(lastRoom).emit('update-player', playerInfo);
+  });
+
   //PREGAME
-  socket.on("startgame", () => {
+  socket.once("startgame", () => {
     console.log('startedgame', socket.id);
     var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
-    Socketio.to(lastRoom).emit('pregame', users.length);
-    shuffleArray(users);
-    users[0]["role"] = "MAFIA";
-    users[1]["role"] = "POLICE";
-    users[2]["role"] = "DOCTOR";
-    shuffleArray(users);
-    console.log("mafia chosen:", users);
-    Socketio.emit("user-card", users);
+    Socketio.to(lastRoom).emit('pregame', users[lastRoom].length);
+    shuffleArray(users[lastRoom]);
+    users[lastRoom][0]["role"] = "MAFIA";
+    users[lastRoom][1]["role"] = "POLICE";
+    users[lastRoom][2]["role"] = "DOCTOR";
+    shuffleArray(users[lastRoom]);
+    console.log("mafia chosen:", users[lastRoom]);
+    Socketio.emit("user-card", users[lastRoom]);
   });
 
   //PREGAME TEST
@@ -98,7 +116,7 @@ Socketio.on("connection", socket => {
   socket.on("time", message => {
     var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
     console.log("NIGHT TIME:", socket.rooms);
-    Socketio.to(lastRoom).emit("update-users", users);
+    Socketio.to(lastRoom).emit("update-users", users[lastRoom]);
     switch (message) {
       case 'night':
         message = "NIGHT TIME";
@@ -119,7 +137,7 @@ Socketio.on("connection", socket => {
       case "mafia":
         socket.emit("prompt", "Mafia, choose your target");
         socket.emit('action', 'actionMafia');
-        socket.emit("update-users", users);
+        socket.emit("update-users", users[lastRoom]);
         break;
       case "police":
         socket.emit("prompt", "Police, investigate a suspect");
@@ -133,7 +151,7 @@ Socketio.on("connection", socket => {
         console.log("citizen round start");
         Socketio.to(lastRoom).emit("prompt", "Everyone, vote who to exile");
         Socketio.to(lastRoom).emit("action", "civAction");
-        Socketio.to(lastRoom).emit("update-users", users);
+        Socketio.to(lastRoom).emit("update-users", users[lastRoom]);
         break;
     }
   });
@@ -141,8 +159,8 @@ Socketio.on("connection", socket => {
   //MAFIA KILL EVENT
   socket.on("kill", name => {
     var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
-    users.find(x => x.name === name).life = false;
-    var victim = users.find(x => x.name === name);
+    users[lastRoom].find(x => x.name === name).life = false;
+    var victim = users[lastRoom].find(x => x.name === name);
     Socketio.to(lastRoom).emit("death-announce", victim);
     console.log("victim:", victim);
 
@@ -153,7 +171,7 @@ Socketio.on("connection", socket => {
   socket.on("search", name => {
     var deadpolice = 0;
     var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
-    var suspect = users.find(x => x.name === name);
+    var suspect = users[lastRoom].find(x => x.name === name);
     if (name === "SkipVote") {
       deadpolice += 1;
       if (deadpolice === policeNumber) {
@@ -173,8 +191,8 @@ Socketio.on("connection", socket => {
       console.log("skipvote");
       Socketio.to(lastRoom).emit("prompt-save", data.name);
     } else {
-      users.find(x => x.name === data.name).life = true;
-      console.log(data.victim);
+      users[lastRoom].find(x => x.name === data.name).life = true;
+      console.log("Saved", data.victim);
       socket.emit("prompt", `You chose to save ${data.name}`);
       Socketio.to(lastRoom).emit("prompt-save", data.name);
     }
@@ -189,7 +207,7 @@ Socketio.on("connection", socket => {
       console.log("citizen round start");
       Socketio.to(lastRoom).emit("prompt", "Civilians vote who to exile.");
       Socketio.to(lastRoom).emit("action", "civAction");
-      Socketio.to(lastRoom).emit("update-users", users);
+      Socketio.to(lastRoom).emit("update-users", users[lastRoom]);
     } else {
       console.log(data.userLength, data.readyVotes);
       Socketio.to(lastRoom).emit("addReady");
@@ -221,12 +239,12 @@ Socketio.on("connection", socket => {
       Socketio.to(lastRoom).emit("vote-none");
     } else if ((info.votes[exiled].length / info.living) > 0.5) {
       Socketio.to(lastRoom).emit("exiled", exiled);
-      users.find(x => x.name === exiled).life = false;
+      users[lastRoom].find(x => x.name === exiled).life = false;
     } else {
       Socketio.to(lastRoom).emit("vote-none");
     }
 
-    Socketio.to(lastRoom).emit("update-users", users);
+    Socketio.to(lastRoom).emit("update-users", users[lastRoom]);
     setTimeout(function () {
       checkWinner(socket);
     }, 4000);
@@ -240,8 +258,8 @@ Socketio.on("connection", socket => {
 
   function checkWinner(socket) {
     var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
-    var mafia = users.filter(x => x.role === 'MAFIA' && x.life === true);
-    var citizens = users.filter(x => x.role !== 'MAFIA' && x.life === true);
+    var mafia = users[lastRoom].filter(x => x.role === 'MAFIA' && x.life === true);
+    var citizens = users[lastRoom].filter(x => x.role !== 'MAFIA' && x.life === true);
     if (mafia.length === 0) {
       Socketio.to(lastRoom).emit("endgame", "citizens");
       console.log("Citizens Win!");
@@ -262,24 +280,24 @@ Http.listen(3000, () => {
   console.log("Listening at :3000...");
 });
 
-function addUser(name, socket) {
-  user["id"] = socket.id;
-  user["name"] = name;
-  user["role"] = "Civilian";
-  user["life"] = true;
-  users.push(JSON.parse(JSON.stringify(user)));
-  console.log("NEW USER:", users);
-}
-
-// new add user method
-// function adduser(name, socket) {
-//   var user = {};
+// function addUser(name, socket) {
 //   user["id"] = socket.id;
 //   user["name"] = name;
 //   user["role"] = "Civilian";
 //   user["life"] = true;
 //   users.push(JSON.parse(JSON.stringify(user)));
+//   console.log("NEW USER:", users);
 // }
+
+// new add user method
+function addUser(name, socket) {
+  var user = {};
+  user["id"] = socket.id;
+  user["name"] = name;
+  user["role"] = "Civilian";
+  user["life"] = true;
+  return user;
+}
 
 /* Randomize array in-place using Durstenfeld shuffle algorithm */
 function shuffleArray(array) {
@@ -291,12 +309,6 @@ function shuffleArray(array) {
   }
 }
 
-function voteSetup() {
-  // users.forEach(function (user) {
-  //   votes[user.name] = 0;
-  //   votes["SkipVote"] = 0;
-  // });
-}
 
 //USER ROLE DEALING WITH SETTING PARAMETERS
 // var mafiaNumber = 1;
@@ -304,13 +316,3 @@ function voteSetup() {
 // var doctorNumber = 1;
 
 
-// var roleNumber = mafiaNumber + policeNumber + doctorNumber;
-// for (var i = 0; i < roleNumber; i++) {
-//   if (i < mafiaNumber) {
-//     users[i]["role"] = "MAFIA";
-//   } else if (i < (mafiaNumber + policeNumber) && (i >= mafiaNumber)) {
-//     users[i]["role"] = "POLICE";
-//   } else if (i < (mafiaNumber + policeNumber + doctorNumber) && (i >= (mafiaNumber + policeNumber))) {
-//     users[i]["role"] = "DOCTOR";
-//   }
-// }
