@@ -54,6 +54,33 @@ Socketio.on("connection", socket => {
     Socketio.emit("user-card", users);
   });
 
+  //PREGAME TEST
+  // socket.on("startgame", (options) => {
+  //   console.log('startedgame', socket.id);
+  //   var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
+  //   var mafia = options.mafiaNum;
+  //   var mafiaPolice = options.mafiaNum + options.policeNum;
+  //   var mafiaPoliceDoc = options.mafNum + options.policeNum + options.doctorNum;
+  //   Socketio.to(lastRoom).emit('pregame', users.length);
+  //   shuffleArray(users);
+  //   for (var i = 0; i < options.users.length; i++) {
+  //     if (i < mafia) {
+  //       users[i]["role"] = "MAFIA";
+  //     } else if (i >= mafia && i < mafiaPolice) {
+  //       users[i]["role"] = "POLICE";
+  //     } else if (i >= mafiaPolice && i < mafiaPoliceDoc) {
+  //       users[i]["role"] = "DOCTOR";
+  //     }
+  //   }
+
+  //   shuffleArray(users);
+  //   console.log("mafia chosen:", users);
+  //   Socketio.emit("user-card", users);
+  // });
+
+
+
+
   //Documenting Player status
   socket.on("pregame-loaded", () => {
     console.log("this person loaded:", socket.id);
@@ -243,6 +270,16 @@ function addUser(name, socket) {
   users.push(JSON.parse(JSON.stringify(user)));
   console.log("NEW USER:", users);
 }
+
+// new add user method
+// function adduser(name, socket) {
+//   var user = {};
+//   user["id"] = socket.id;
+//   user["name"] = name;
+//   user["role"] = "Civilian";
+//   user["life"] = true;
+//   users.push(JSON.parse(JSON.stringify(user)));
+// }
 
 /* Randomize array in-place using Durstenfeld shuffle algorithm */
 function shuffleArray(array) {
