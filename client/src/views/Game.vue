@@ -128,7 +128,7 @@ export default {
       this.message = time;
       this.voteResults = {};
       this.showVoteResults = false;
-      setTimeout(this.mafiaRound, 3000);
+      setTimeout(this.mafiaRound, 4000);
       console.log("night!");
     });
     this.socket.on("day-time", (time) => {
@@ -144,8 +144,12 @@ export default {
         this.promptMessage = prompt;
         setTimeout(this.clearPrompt, 3000);
       } else {
-        setTimeout(this.doctorRound, 3000);
+        // setTimeout(this.doctorRound, 3000);
+        this.socket.emit("doctor-ready");
       }
+    });
+    this.socket.on("begin-doctor", () => {
+      setTimeout(this.doctorRound, 3000);
     });
     this.socket.on("prompt-save", (data) => {
       if (this.victim === data) {

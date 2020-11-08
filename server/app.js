@@ -6,18 +6,12 @@ const Socketio = require("socket.io")(Http);
 
 
 
-// var sockets = [];
 var users = {};
 var options = {};
-// var mafia = {};
 
 
-// const gameRooms = ["NYC", "LA", "VEGAS"];
 const policeNumber = 1;
 
-const sleep = (milliseconds) => {
-  return new Promise(resolve => setTimeout(resolve, milliseconds));
-};
 
 Socketio.on("connection", socket => {
   // sockets.push(socket);
@@ -33,10 +27,10 @@ Socketio.on("connection", socket => {
   socket.on("join-room", room => {
     if (users[room] === undefined) {
       socket.emit("err", `${room} does not exist!`);
+    } else {
+      socket.join(room);
+      socket.emit("success", room);
     }
-    socket.join(room);
-    socket.emit("success", room);
-
   });
 
   //USER ADD
@@ -107,9 +101,7 @@ Socketio.on("connection", socket => {
   socket.on("get-card", (data) => {
     console.log('received name', data.name);
     var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
-    // console.log(userCard);
     Socketio.to(lastRoom).emit('card-dealt');
-    // socket.emit("user-card", userCard);
   });
 
   //DAY/NIGHT CYCLE
@@ -184,6 +176,12 @@ Socketio.on("connection", socket => {
     }
   });
 
+
+  socket.on("doctor-ready", () => {
+    var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
+    Socketio.to(lastRoom).emit("begin-doctor");
+  });
+
   //DOCTOR SAVE EVENT
   socket.on("save", data => {
     var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
@@ -250,9 +248,6 @@ Socketio.on("connection", socket => {
     }, 4000);
   });
 
-  socket.on("test", () => {
-    checkWinner(socket);
-  });
 
   //VICTORY CONDITIONS 
 
