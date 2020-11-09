@@ -20,7 +20,7 @@ Socketio.on("connection", socket => {
     socket.join(options.room);
     users[options.room] = [];
     console.log(users);
-    options[options.room] = [options.options];
+    options[options.room] = [options.settings];
     socket.emit("success", options.room);
   });
 
@@ -53,42 +53,42 @@ Socketio.on("connection", socket => {
   });
 
   //PREGAME
-  socket.once("startgame", () => {
+  // socket.once("startgame", () => {
+  //   console.log('startedgame', socket.id);
+  //   var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
+  //   Socketio.to(lastRoom).emit('pregame', users[lastRoom].length);
+  //   shuffleArray(users[lastRoom]);
+  //   users[lastRoom][0]["role"] = "MAFIA";
+  //   users[lastRoom][1]["role"] = "POLICE";
+  //   users[lastRoom][2]["role"] = "DOCTOR";
+  //   shuffleArray(users[lastRoom]);
+  //   console.log("mafia chosen:", users[lastRoom]);
+  //   Socketio.emit("user-card", users[lastRoom]);
+  // });
+
+  // PREGAME TEST
+  socket.on("startgame", (options) => {
     console.log('startedgame', socket.id);
     var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
+    var mafia = options.settings.mafiaNum;
+    var mafiaPolice = options.settings.mafiaNum + options.settings.policeNum;
+    var mafiaPoliceDoc = options.settings.mafiaNum + options.settings.policeNum + options.settings.doctorNum;
     Socketio.to(lastRoom).emit('pregame', users[lastRoom].length);
     shuffleArray(users[lastRoom]);
-    users[lastRoom][0]["role"] = "MAFIA";
-    users[lastRoom][1]["role"] = "POLICE";
-    users[lastRoom][2]["role"] = "DOCTOR";
+    for (var i = 0; i < users[lastRoom].length; i++) {
+      if (i < mafia) {
+        users[lastRoom][i]["role"] = "MAFIA";
+      } else if (i >= mafia && i < mafiaPolice) {
+        users[lastRoom][i]["role"] = "POLICE";
+      } else if (i >= mafiaPolice && i < mafiaPoliceDoc) {
+        users[lastRoom][i]["role"] = "DOCTOR";
+      }
+    }
+
     shuffleArray(users[lastRoom]);
     console.log("mafia chosen:", users[lastRoom]);
     Socketio.emit("user-card", users[lastRoom]);
   });
-
-  //PREGAME TEST
-  // socket.on("startgame", (options) => {
-  //   console.log('startedgame', socket.id);
-  //   var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
-  //   var mafia = options.mafiaNum;
-  //   var mafiaPolice = options.mafiaNum + options.policeNum;
-  //   var mafiaPoliceDoc = options.mafNum + options.policeNum + options.doctorNum;
-  //   Socketio.to(lastRoom).emit('pregame', users.length);
-  //   shuffleArray(users);
-  //   for (var i = 0; i < options.users.length; i++) {
-  //     if (i < mafia) {
-  //       users[i]["role"] = "MAFIA";
-  //     } else if (i >= mafia && i < mafiaPolice) {
-  //       users[i]["role"] = "POLICE";
-  //     } else if (i >= mafiaPolice && i < mafiaPoliceDoc) {
-  //       users[i]["role"] = "DOCTOR";
-  //     }
-  //   }
-
-  //   shuffleArray(users);
-  //   console.log("mafia chosen:", users);
-  //   Socketio.emit("user-card", users);
-  // });
 
 
 
@@ -265,7 +265,7 @@ Socketio.on("connection", socket => {
       Socketio.to(lastRoom).emit("endgame", "NONE");
       console.log("No Winner Yet");
     }
-    console.log("check", lastRoom);
+    console.log("check", users[lastRoom]);
   }
 });
 
