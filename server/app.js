@@ -52,19 +52,6 @@ Socketio.on("connection", socket => {
     Socketio.to(lastRoom).emit('update-player', playerInfo);
   });
 
-  //PREGAME
-  // socket.once("startgame", () => {
-  //   console.log('startedgame', socket.id);
-  //   var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
-  //   Socketio.to(lastRoom).emit('pregame', users[lastRoom].length);
-  //   shuffleArray(users[lastRoom]);
-  //   users[lastRoom][0]["role"] = "MAFIA";
-  //   users[lastRoom][1]["role"] = "POLICE";
-  //   users[lastRoom][2]["role"] = "DOCTOR";
-  //   shuffleArray(users[lastRoom]);
-  //   console.log("mafia chosen:", users[lastRoom]);
-  //   Socketio.emit("user-card", users[lastRoom]);
-  // });
 
   // PREGAME TEST
   socket.on("startgame", (options) => {
@@ -89,6 +76,7 @@ Socketio.on("connection", socket => {
     console.log("mafia chosen:", users[lastRoom]);
     Socketio.emit("user-card", users[lastRoom]);
     Socketio.emit("settings", settings[lastRoom]);
+    console.log("SETTINGS:", settings[lastRoom]);
   });
 
 
@@ -276,15 +264,6 @@ Http.listen(3000, () => {
   console.log("Listening at :3000...");
 });
 
-// function addUser(name, socket) {
-//   user["id"] = socket.id;
-//   user["name"] = name;
-//   user["role"] = "Civilian";
-//   user["life"] = true;
-//   users.push(JSON.parse(JSON.stringify(user)));
-//   console.log("NEW USER:", users);
-// }
-
 // new add user method
 function addUser(name, socket) {
   var user = {};
@@ -305,10 +284,5 @@ function shuffleArray(array) {
   }
 }
 
-
-//USER ROLE DEALING WITH SETTING PARAMETERS
-// var mafiaNumber = 1;
-// var policeNumber = 1;
-// var doctorNumber = 1;
 
 
