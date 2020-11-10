@@ -7,7 +7,7 @@ const Socketio = require("socket.io")(Http);
 
 
 var users = {};
-var options = {};
+var settings = {};
 
 
 const policeNumber = 1;
@@ -20,7 +20,7 @@ Socketio.on("connection", socket => {
     socket.join(options.room);
     users[options.room] = [];
     console.log(users);
-    options[options.room] = [options.settings];
+    settings[options.room] = options.settings;
     socket.emit("success", options.room);
   });
 
@@ -88,6 +88,7 @@ Socketio.on("connection", socket => {
     shuffleArray(users[lastRoom]);
     console.log("mafia chosen:", users[lastRoom]);
     Socketio.emit("user-card", users[lastRoom]);
+    Socketio.emit("settings", settings[lastRoom]);
   });
 
 
