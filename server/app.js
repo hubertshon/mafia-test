@@ -34,17 +34,15 @@ Socketio.on("connection", socket => {
   });
 
   //USER ADD
-
-  //new adduser
   socket.on("add-user", name => {
     console.log(socket.rooms);
     var userinfo = addUser(name, socket);
     var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
-    console.log('added', users);
     users[lastRoom].push(userinfo);
     socket.emit('setup-user', userinfo);
     Socketio.to(lastRoom).emit('user-connected', { name: name, userList: users[lastRoom] });
     socket.emit('message', `Welcome ${name}!`);
+    console.log('added', users);
   });
 
   socket.on("update-all", (playerInfo) => {
@@ -144,7 +142,6 @@ Socketio.on("connection", socket => {
     var victim = users[lastRoom].find(x => x.name === name);
     Socketio.to(lastRoom).emit("death-announce", victim);
     console.log("victim:", victim);
-
   });
 
 
@@ -155,7 +152,8 @@ Socketio.on("connection", socket => {
     var suspect = users[lastRoom].find(x => x.name === name);
     if (name === "SkipVote") {
       deadpolice += 1;
-      if (deadpolice === policeNumber) {
+      // used to be policeNumber
+      if (deadpolice === settings[lastRoom].policeNum) {
         Socketio.to(lastRoom).emit("prompt-search", `You're a ghost!`);
       }
     } else if (suspect.role === "MAFIA") {
@@ -237,10 +235,17 @@ Socketio.on("connection", socket => {
     }, 4000);
   });
 
+  // socket.on('disconnect', () => {
+  //   var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
+  // find users with that socket, remove the room 
+  // remove the options
+  // })
+
 
   //VICTORY CONDITIONS 
 
   function checkWinner(socket) {
+    console.log("Check Winner", users[lastRoom]);
     var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
     var mafia = users[lastRoom].filter(x => x.role === 'MAFIA' && x.life === true);
     var citizens = users[lastRoom].filter(x => x.role !== 'MAFIA' && x.life === true);
@@ -254,7 +259,6 @@ Socketio.on("connection", socket => {
       Socketio.to(lastRoom).emit("endgame", "NONE");
       console.log("No Winner Yet");
     }
-    console.log("check", users[lastRoom]);
   }
 });
 
