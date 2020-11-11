@@ -4,20 +4,22 @@
     <div id="login" v-if="login > 0">
       <h1>Username</h1>
       <h5> {{serverMessage}}</h5>
-        <input type="text" v-model="userName" placeholder="Enter name" />
-        <button id="Login_Register" v-on:click="addUser(userName)">Login</button>
-        <h3>Players</h3>
+      <input type="text" v-model="userName" placeholder="Enter name" />
+      
+      <button id="Login_Register" v-on:click="addUser()">Login</button>
+      <h3>Players</h3>
 
-          <p v-for="user in playerList" :key="user.id">
-            {{ user.name }}
-          </p>
-        <div>
-          <button v-on:click="cleanUp()">Clean Up</button>
-          <input type="text" v-model="roomInput">
-          <button v-on:click="joinRoom(roomInput)">Join ROOM</button>
-          <button v-on:click="joinRoom('NYC')">Join NYC</button>
-          <button v-on:click="startGame()" v-if="playerList.length > 1">START GAME</button>
-        </div>
+      <p v-for="user in playerList" :key="user.id">
+        {{ user.name }}
+      </p>
+
+      <div>
+        <button v-on:click="hostGame()">Host GAme</button>
+        <input type="text" v-model="options.room">
+        <button v-on:click="joinRoom(options.room)">Join ROOM</button>
+        <button v-on:click="joinRoom('NYC')">Join NYC</button>
+        <button v-on:click="startGame()" v-if="playerList.length > 1">START GAME</button>
+      </div>
     </div>
   </div>
 </template>
@@ -36,9 +38,19 @@ export default {
       login: 1,
       roomInput: "",
       roomjoin: "",
-
       serverMessage: "",
       userCount: 0,
+      options: {
+        name: "",
+        room: "",
+        settings: {
+          mafiaNum: 1,
+          policeNum: 1,
+          doctorNum: 1,
+          timer: 30,
+          announceSave: true,
+        },
+      },
     };
   },
   created: function () {
@@ -78,17 +90,20 @@ export default {
     });
   },
   methods: {
-    addUser(name) {
-      console.log("adding user", name);
-      this.socket.emit("add-user", name);
+    addUser() {
+      console.log("adding user", this.userName);
+      this.socket.emit("add-user", this.userName);
     },
     startGame() {
       console.log("start");
-      this.socket.emit("startgame");
+      this.socket.emit("startgame", this.options);
       this.login -= 1;
     },
     joinRoom(room) {
       this.socket.emit("join-room", room);
+    },
+    hostGame() {
+      this.socket.emit("host-game", this.options).then(this.addUser());
     },
   },
 };

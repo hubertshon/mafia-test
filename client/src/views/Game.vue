@@ -52,6 +52,7 @@
       </div>
 
       <!-- CIVILIAN DAY VOTE -->
+      <h3>{{ timer }} </h3>
       <button v-show="this.message === 'DAY TIME' && this.showReady === true" v-on:click="sendReady()">Begin Vote</button>
       <div v-if="actionPrompt==='civAction'">
         <div class="citizen-vote" v-for="user in userList" :key="user.id">
@@ -104,6 +105,8 @@ export default {
       showReady: true,
       cardReady: 0,
       winMessage: "",
+      settings: null,
+      timer: 30,
     };
   },
   created() {
@@ -111,10 +114,14 @@ export default {
     this.socket.emit("pregame-loaded");
   },
   mounted() {
-    this.socket.on("user-card", (card) => {
-      console.log("got the card", card);
-      this.userInfo = card.find((x) => x.name === this.userName);
+    this.socket.on("user-card", (cards) => {
+      console.log("got the card", cards);
+      this.userInfo = cards.find((x) => x.name === this.userName);
+      this.userList = cards;
       console.log(this.userInfo);
+    });
+    this.socket.on("settings", (settings) => {
+      this.settings = settings;
     });
     this.socket.on("card-dealt", () => {
       console.log("RDY", this.cardReady);
@@ -163,6 +170,7 @@ export default {
       if (action === "civAction") {
         this.readyVote = 0;
         this.showReady = true;
+        this.startTimer();
       }
     });
     this.socket.on("users", (users) => {
@@ -349,6 +357,21 @@ export default {
     changeToDay() {
       this.change("day");
       console.log("day");
+    },
+    startTimer() {
+      this.timer = this.settings.timer;
+      this.countdown();
+    },
+    countdown() {
+      if (this.timer > -1) {
+        this.timerVar = setTimeout(() => {
+          this.timer -= 1;
+          this.countdown();
+        }, 1000);
+      } else if (this.timer === -1) {
+        this.timer = this.settings.timer;
+        this.voteSkip();
+      }
     },
   },
 };
