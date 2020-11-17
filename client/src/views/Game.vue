@@ -31,21 +31,21 @@
       <p v-if="showVoteResults === true">{{ voteResults }} </p>
       <!-- MAFIA NIGHT VOTE -->
       <div v-if="actionPrompt==='actionMafia'">
-        <div class="mafia-vote" v-for="user in userList" :key="user.id">
+        <div class="mafia-vote" v-for="user in livingList" :key="user.id">
           <p> {{ user.name }} </p>
           <button v-on:click="killPlayer(user.name)">Kill</button>
         </div>
       </div>
 
       <div v-if="actionPrompt==='actionPolice'">
-        <div class="police-vote" v-for="user in userList" :key="user.id">
+        <div class="police-vote" v-for="user in livingList" :key="user.id">
           <p> {{ user.name }} </p>
           <button v-on:click="checkPlayer(user.name)">Investigate</button>
         </div>
       </div>
 
       <div v-if="actionPrompt === 'actionDoctor'">
-        <div class="doctor-vote" v-for="user in userList" :key="user.id">
+        <div class="doctor-vote" v-for="user in livingList" :key="user.id">
           <p> {{ user.name }} </p>
           <button v-on:click="savePlayer(user.name)">Save</button>
         </div>
@@ -55,7 +55,7 @@
       <h3>{{ timer }} </h3>
       <button v-show="this.message === 'DAY TIME' && this.showReady === true" v-on:click="sendReady()">Begin Vote</button>
       <div v-if="actionPrompt==='civAction'">
-        <div class="citizen-vote" v-for="user in userList" :key="user.id">
+        <div class="citizen-vote" v-for="user in livingList" :key="user.id">
           <p> {{ user.name }} </p>
           <button v-on:click="votePlayer(user.name)">Vote</button>
           
@@ -97,6 +97,7 @@ export default {
       userInfo: {
         role: "...",
       },
+      livingList: [],
       victim: "",
       readyVote: 0,
       voteResults: {},
@@ -107,6 +108,7 @@ export default {
       winMessage: "",
       settings: null,
       timer: 30,
+      voted: false,
     };
   },
   created() {
@@ -133,6 +135,7 @@ export default {
     });
     this.socket.on("night-time", (time) => {
       this.message = time;
+      this.helpMessage = "";
       this.voteResults = {};
       this.showVoteResults = false;
       setTimeout(this.mafiaRound, 4000);
@@ -142,6 +145,7 @@ export default {
       this.message = time;
       this.promptMessage = this.victimMessage;
       this.actionPrompt = "";
+      this.voted = false;
     });
     this.socket.on("prompt", (prompt) => {
       this.promptMessage = prompt;
@@ -177,6 +181,7 @@ export default {
       this.userList = users;
     });
     this.socket.on("death-announce", (victim) => {
+      this.actionPrompt = "";
       console.log("victim found", victim);
       this.victim = victim.name;
       this.victimMessage = `${this.victim} was found dead.`;
@@ -186,6 +191,8 @@ export default {
     this.socket.on("update-users", (users) => {
       console.log("update-users");
       this.userList = users;
+      this.livingList = this.userList.filter((user) => user.life === true);
+
       this.checkHealth();
       this.clearHelp();
     });
@@ -232,7 +239,8 @@ export default {
         //but that would not makese sense, tested this empty.
         this.message = "MAFIA WINS";
       } else if (winner === "NONE" && this.showVoteResults === true) {
-        setTimeout(this.changeToNight, 4000);
+        // setTimeout(this.changeToNight, 4000);
+        // this.helpMessage = "Night time starting soon";
       }
     });
   },
@@ -290,7 +298,9 @@ export default {
         this.userInfo.role === "DOCTOR" &&
         this.deathmessage === "YOU DIED"
       ) {
-        setTimeout(this.savePlayer("SkipVote"), 1500);
+        setTimeout(() => {
+          this.savePlayer("SkipVote"), 4000;
+        });
       }
     },
     savePlayer(name) {
@@ -315,15 +325,19 @@ export default {
       this.socket.emit("vote", { votee: name, voter: this.userInfo.name });
       this.actionPrompt = "";
       this.helpMessage = `You voted for ${name}`;
+      this.voted = true;
       console.log("vote cast");
     },
     voteSkip() {
-      this.socket.emit("vote-skip", {
-        votee: "SkipVote",
-        voter: this.userInfo.name,
-      });
+      if (this.voted === false) {
+        this.socket.emit("vote-skip", {
+          votee: "SkipVote",
+          voter: this.userInfo.name,
+        });
+        this.actionPrompt = "You skipped vote";
+      }
       this.helpMessage = "";
-      this.actionPrompt = "You skipped vote";
+      this.voted = true;
     },
     voteDone() {
       var leftAlive = this.userList.filter((obj) => obj.life === true).length;
@@ -332,6 +346,8 @@ export default {
         living: leftAlive,
         votes: this.voteResults,
       });
+      clearTimeout(this.timerVar);
+      this.nextRoundTimer();
     },
     // civRound() {
     //   this.socket.emit("round", "citizen");
@@ -370,8 +386,16 @@ export default {
         }, 1000);
       } else if (this.timer === -1) {
         this.timer = this.settings.timer;
-        this.voteSkip();
+        if (this.actionPrompt === "civAction") {
+          this.voteSkip();
+        } else {
+          this.changeToNight();
+        }
       }
+    },
+    nextRoundTimer() {
+      this.timer = 10;
+      this.countdown();
     },
   },
 };

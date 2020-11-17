@@ -72,8 +72,8 @@ Socketio.on("connection", socket => {
 
     shuffleArray(users[lastRoom]);
     console.log("mafia chosen:", users[lastRoom]);
-    Socketio.emit("user-card", users[lastRoom]);
-    Socketio.emit("settings", settings[lastRoom]);
+    Socketio.to(lastRoom).emit("user-card", users[lastRoom]);
+    Socketio.to(lastRoom).emit("settings", settings[lastRoom]);
     console.log("SETTINGS:", settings[lastRoom]);
   });
 
@@ -94,10 +94,10 @@ Socketio.on("connection", socket => {
   //DAY/NIGHT CYCLE
   socket.on("time", message => {
     var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
-    console.log("NIGHT TIME:", socket.rooms);
     Socketio.to(lastRoom).emit("update-users", users[lastRoom]);
     switch (message) {
       case 'night':
+        console.log("NIGHT TIME:", socket.rooms);
         message = "NIGHT TIME";
         Socketio.to(lastRoom).emit("night-time", message);
         break;
@@ -190,7 +190,7 @@ Socketio.on("connection", socket => {
     var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
     if ((data.living / 2) < (data.readyVotes + 1)) {
       console.log("citizen round start");
-      Socketio.to(lastRoom).emit("prompt", "Civilians vote who to exile.");
+      Socketio.to(lastRoom).emit("prompt", "Civilians vote who to exile");
       Socketio.to(lastRoom).emit("action", "civAction");
       Socketio.to(lastRoom).emit("update-users", users[lastRoom]);
     } else {
