@@ -280,9 +280,10 @@ export default {
     },
     //POLICE ROUND
     policeRound() {
-      this.playSound("wakepolice");
       var police = this.livingList.filter((player) => player.role === "POLICE");
-      var policeLeft = police.filter((cop) => cop.life === "TRUE");
+      var policeLeft = police.filter((cop) => cop.life === true);
+      console.log("police", police);
+      console.log("policeleft", policeLeft);
       if (
         policeLeft.length > 0 ||
         police.find((player) => player.name === this.victim)
@@ -291,8 +292,11 @@ export default {
           this.socket.emit("round", "police");
           console.log("police sent!");
         }
-      } else {
-        setTimeout(this.skipPoliceSearch, 2000);
+      } else if (
+        police.length === 0 &&
+        police.find((player) => player.name === this.victim) === undefined
+      ) {
+        setTimeout(this.doctorRound, 3000);
       }
     },
     checkPlayer(name) {
@@ -404,7 +408,7 @@ export default {
       }
     },
     nextRoundTimer() {
-      this.timer = 10;
+      this.timer = 8;
       this.countdown();
     },
   },

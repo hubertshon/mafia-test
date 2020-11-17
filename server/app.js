@@ -101,6 +101,7 @@ Socketio.on("connection", socket => {
         console.log("NIGHT TIME:", socket.rooms);
         message = "NIGHT TIME";
         Socketio.to(lastRoom).emit("night-time", message);
+        console.log(users[lastRoom]);
         break;
       case 'day':
         message = "DAY TIME";
