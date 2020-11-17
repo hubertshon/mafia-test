@@ -164,13 +164,18 @@ export default {
     });
     this.socket.on("prompt-save", (data) => {
       if (this.victim === data) {
-        this.victimMessage = `${data} almost died, but was miraculously saved!`;
+        if (this.settings.announceSave === true) {
+          this.victimMessage = `${this.victim} almost died, but was saved!`;
+        } else if (this.settings.announceSave === false) {
+          this.victimMessage = "No one died during the night";
+        }
       } else {
-        this.victimMessage = `${this.victim} was found dead.`;
+        this.victimMessage = `${this.victim} was found dead`;
       }
     });
     this.socket.on("action", (action) => {
       this.actionPrompt = action;
+      console.log(this.actionPrompt);
       if (action === "civAction") {
         this.readyVote = 0;
         this.showReady = true;
@@ -275,14 +280,19 @@ export default {
     },
     //POLICE ROUND
     policeRound() {
-      if (this.userInfo.role === "POLICE" && this.deathmessage === "") {
-        this.socket.emit("round", "police");
-        console.log("police sent!");
-      } else if (
-        this.userInfo.role === "POLICE" &&
-        this.deathmessage === "YOU DIED"
+      this.playSound("wakepolice");
+      var police = this.livingList.filter((player) => player.role === "POLICE");
+      var policeLeft = police.filter((cop) => cop.life === "TRUE");
+      if (
+        policeLeft.length > 0 ||
+        police.find((player) => player.name === this.victim)
       ) {
-        setTimeout(this.skipPoliceSearch, 1500);
+        if (this.userInfo.role === "POLICE" && this.deathmessage === "") {
+          this.socket.emit("round", "police");
+          console.log("police sent!");
+        }
+      } else {
+        setTimeout(this.skipPoliceSearch, 2000);
       }
     },
     checkPlayer(name) {

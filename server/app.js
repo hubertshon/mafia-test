@@ -36,6 +36,7 @@ Socketio.on("connection", socket => {
   //USER ADD
   socket.on("add-user", name => {
     console.log(socket.rooms);
+    console.log(name);
     var userinfo = addUser(name, socket);
     var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
     users[lastRoom].push(userinfo);
@@ -114,6 +115,7 @@ Socketio.on("connection", socket => {
     var lastRoom = Object.keys(socket.rooms)[Object.keys(socket.rooms).length - 1];
     switch (data) {
       case "mafia":
+        console.log("mafia round");
         socket.emit("prompt", "Mafia, choose your target");
         socket.emit('action', 'actionMafia');
         socket.emit("update-users", users[lastRoom]);
