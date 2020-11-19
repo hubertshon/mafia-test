@@ -305,12 +305,18 @@ export default {
     },
     //DOCTOR ROUND
     doctorRound() {
-      if (this.userInfo.role === "DOCTOR" && this.deathmessage === "") {
-        this.socket.emit("round", "doctor");
-        console.log("doctor sent!");
+      var doctor = this.livingList.filter((player) => player.role === "DOCTOR");
+      if (
+        doctor.length > 0 ||
+        doctor.find((user) => user.role === this.victim)
+      ) {
+        if (this.userInfo.role === "DOCTOR" && this.deathmessage === "") {
+          this.socket.emit("round", "doctor");
+          console.log("doctor sent!");
+        }
       } else if (
-        this.userInfo.role === "DOCTOR" &&
-        this.deathmessage === "YOU DIED"
+        doctor.length === 0 &&
+        doctor.find((player) => player.name === this.victim) === undefined
       ) {
         setTimeout(() => {
           this.savePlayer("SkipVote"), 4000;
